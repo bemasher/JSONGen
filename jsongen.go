@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
+// Sanitizes field names.
 type Name string
 
-// Returns sanitized field names
 func (n Name) String() (s string) {
 	s = strings.TrimLeft(string(n), "0123456789")
 
@@ -36,6 +36,7 @@ func (n Name) String() (s string) {
 	return strings.Title(s)
 }
 
+// Maps some special cases to valid golang types.
 type Kind string
 
 func (k Kind) String() string {
@@ -46,7 +47,7 @@ func (k Kind) String() string {
 	return string(k)
 }
 
-// Type is used for describing the structure of decoded JSON data.
+// Used for describing the structure of decoded JSON data.
 type Type struct {
 	Name Name
 	Kind Kind
@@ -61,6 +62,7 @@ func (t Type) String() string {
 	return fmt.Sprintf("{Name:%s Type:%s IsList:%t IsCompound:%t}", t.Name, t.Kind, t.IsList, t.IsCompound)
 }
 
+// Returns canonical form golang of the type structure.
 func (t Type) Format() string {
 	str := t.formatHelper(0)
 
@@ -116,29 +118,41 @@ func (t Type) formatHelper(depth int) (r string) {
 func Parse(name string, data interface{}) (t Type) {
 	t.Name = Name(name)
 
+	// There are three base cases of types: concrete, compound and list.
 	switch T := data.(type) {
+
+	// A compound json object.
 	case map[string]interface{}:
 		t.IsCompound = true
 		t.Kind = Kind("struct")
 		t.Fields = make(map[string]Type)
+
+		// Recurse on the compound object's fields.
 		for k, v := range T {
 			t.Fields[k] = Parse(k, v)
 		}
+
+	// A list of json objects
 	case []interface{}:
 		t.IsList = true
+
+		// Determine if the list is homogeneous or not.
 		listTypes := make(map[Kind]bool)
 		for _, i := range T {
 			k := Kind(fmt.Sprintf("%T", i))
 			listTypes[k] = true
 			t.Kind = k
 
-			// If the list has more than one type, halt parsing
+			// If the list has more than one type, it is heterogeneous
+			// and is represented as a list of empty interfaces.
 			if len(listTypes) > 1 {
 				t.Kind = Kind("interface{}")
 				return
 			}
 		}
 
+		// If this is a list of compound tags, recurse on each item
+		// and merge fields together from all elements of the list.
 		if t.Kind == Kind("map[string]interface {}") {
 			t.IsCompound = true
 			t.Kind = Kind("struct")
@@ -146,6 +160,9 @@ func Parse(name string, data interface{}) (t Type) {
 			for _, i := range T {
 				tmp := Parse(name, i)
 				for k, v := range tmp.Fields {
+					// If we've previously seen this field name and it has a different
+					// type than the last field, then stop parsing and treat list as a
+					// list of empty interfaces.
 					if _, exists := t.Fields[k]; exists && t.Fields[k].Kind != v.Kind {
 						t.IsCompound = false
 						t.Kind = Kind("interface{}")
@@ -157,6 +174,7 @@ func Parse(name string, data interface{}) (t Type) {
 			}
 		}
 
+	// This field must be a concrete type.
 	default:
 		t.Name = Name(name)
 		t.Kind = Kind(fmt.Sprintf("%T", T))
