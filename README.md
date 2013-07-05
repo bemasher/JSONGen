@@ -57,16 +57,19 @@ If sanitizing produces a field name different from the original value a JSON tag
 
 ## Types
 ### Concrete
-Concrete types are parsed and stored as-is. Valid types are bool, float64 and string. The JSON value `null` is treated as a string.
+  * Concrete types are parsed and stored as-is.
+  * Valid types are bool, float64 and string.
+  * The JSON value `null` is treated as a string.
 
 ### Compound
-Compound types are treated as structs. The upper-most object of the JSON must be a compound type. Fields of compound structures have no guaranteed order.
-
-If a compound structure contains duplicate fields of different types, one of the fields is chosen at random. This is due to golang's unordered iteration over map entries.
+  * Compound types are treated as structs.
+  * The top-level object must be a compound type.
+  * Fields of compound structures have no guaranteed order.
+  * If a compound structure contains duplicate fields of different types, one of the fields is chosen at random. This is due to golang's unordered iteration over map entries. This should never occur since it is not permitted in the JSON specification, but this is the expected behavior should it happen.
 
 ### Lists
-  1. A list of homogeneous concretely typed values are treated as a list of the concrete type e.g.: `[]float64`
-  2. Heterogeneous lists of concretely typed values are treated as a list of the empty interface: `[]interface{}`
-  3. Lists with compound elements are treated as an array of structs. The lists' elements are "squashed" into a struct containing all the fields encountered. If a field in one element has a different type in another, the list is treated as a list of the empty interface as above.
+  * A list of homogeneous concretely typed values are treated as a list of the concrete type e.g.: `[]float64`
+  * Lists of heterogeneous types are treated as a list of the empty interface: `[]interface{}`
+  * Lists with compound elements are treated as an array of structs. Fields of each element are "squashed" into a single struct containing all encountered fields. If a field in one element has a different type in another, the list is treated as a list of the empty interface.
 
 Examples of all of the above can be found in [example/test.json](example/test.json).
