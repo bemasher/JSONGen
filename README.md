@@ -1,5 +1,5 @@
 ## Purpose
-JSONGen is a tool for generating native Golang types from a JSON object. This automates what is otherwise a very tedious and error prone task when working with JSON.
+JSONGen is a tool for generating native Golang types from JSON objects. This automates what is otherwise a very tedious and error prone task when working with JSON.
 
 ## Usage
 ```go
