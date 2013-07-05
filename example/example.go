@@ -25,7 +25,4 @@ func main() {
 	t := jsongen.Parse("Test", data)
 
 	fmt.Println(t.Format())
-
-	fmt.Println()
-	fmt.Printf("%#v\n", t.Fields["non-homogeneous"])
 }
