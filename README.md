@@ -60,7 +60,7 @@ If sanitizing produces a field name different from the original value a JSON tag
 Concrete types are parsed and stored as-is. Valid types are bool, float64 and string. The JSON value `null` is treated as a string.
 
 ### Compound
-Compound types are treated as structs. The upper-most object of the JSON must be a compound type.
+Compound types are treated as structs. The upper-most object of the JSON must be a compound type. Fields of compound structures have no guaranteed order.
 
 If a compound structure contains duplicate fields of different types, one of the fields is chosen at random. This is due to golang's unordered iteration over map entries.
 
