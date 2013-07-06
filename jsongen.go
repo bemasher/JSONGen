@@ -164,10 +164,7 @@ func Parse(name string, data interface{}) (t Type) {
 					// type than the last field, then stop parsing and treat list as a
 					// list of empty interfaces.
 					if _, exists := t.Fields[k]; exists && t.Fields[k].Kind != v.Kind {
-						t.IsCompound = false
-						t.Kind = Kind("interface{}")
-						t.Fields = nil
-						return
+						v.Kind = "interface{}"
 					}
 					t.Fields[k] = v
 				}

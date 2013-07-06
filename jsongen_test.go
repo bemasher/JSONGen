@@ -321,9 +321,39 @@ func TestListFieldConflict(t *testing.T) {
 	expected := root
 	expected.Fields = make(map[string]Type)
 	expected.Fields["field-conflict"] = Type{
-		Name:   "field-conflict",
-		Kind:   "interface{}",
-		IsList: true,
+		Name:       "field-conflict",
+		Kind:       "struct",
+		IsList:     true,
+		IsCompound: true,
+		Fields: map[string]Type{
+			"foo": Type{
+				Name: "foo",
+				Kind: "interface{}",
+			},
+			"bar": Type{
+				Name: "bar",
+				Kind: "float64",
+			},
+			"baz": Type{
+				Name: "baz",
+				Kind: "bool",
+			},
+			"intlist": Type{
+				Name:   "intlist",
+				Kind:   "float64",
+				IsList: true,
+			},
+			"stringlist": Type{
+				Name:   "stringlist",
+				Kind:   "string",
+				IsList: true,
+			},
+			"boollist": Type{
+				Name:   "boollist",
+				Kind:   "bool",
+				IsList: true,
+			},
+		},
 	}
 
 	if !reflect.DeepEqual(gtype, expected) {
