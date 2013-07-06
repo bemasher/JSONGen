@@ -76,4 +76,4 @@ The generated type's name is given by the name parameter in Parse on the first c
 Examples of all of the above can be found in [example/test.json](example/test.json).
 
 ## Caveats
-  * Currently field names within a struct are considered unique based on their unsanitized form. This could be troublesome if sanitizing produces non-unique field names of siblings.
+  * Currently field names within a struct are considered unique based on their unsanitized form. This could be troublesome if sanitizing produces non-unique field names of siblings. This also complicates the handling of field tags in the case of unique unsantizied names which sanitize to non-unique names.
