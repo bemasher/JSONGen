@@ -49,11 +49,10 @@ type Test struct {
 The generated type's name is given by the name parameter in Parse on the first call.
 
 ### Field Names
-Field names are sanitized and written as exported fields of the generated type.
-
-If sanitizing produces an empty string the original field name is prefixed with an underscore and only invalid identifier characters are removed. For example if a field name of "12345" is sanitized it will produce an empty string due to golang disallowing identifiers to begin with numbers. The sanitized name would then become "_12345" which is a valid golang identifier.
-
-If sanitizing produces a field name different from the original value a JSON tag is added to the field allowing parsing after the field name has been modified.
+  * Field names are sanitized and written as exported fields of the generated type.
+  * If sanitizing produces an empty string the original field name is prefixed with an underscore and only invalid identifier characters are removed.
+    * The initial sanitizing method trims digits from the left of the identifier. This step performed on a field name of "12345" would produce an empty string. At this point the field name is instead stripped of only invalid characters like punctuation and prefixed with an underscore.
+  * If sanitizing produces a field name different from the original value a JSON tag is added to the field allowing parsing after the field name has been modified.
 
 ## Types
 ### Concrete
@@ -75,3 +74,6 @@ If sanitizing produces a field name different from the original value a JSON tag
     * If a field in one element has a different type in another of the same list, the offending field is treated as an empty interface.
 
 Examples of all of the above can be found in [example/test.json](example/test.json).
+
+## Caveats
+  * Currently field names within a struct are considered unique based on their unsanitized form. This could be troublesome if sanitizing produces non-unique field names of siblings.
