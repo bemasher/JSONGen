@@ -70,6 +70,8 @@ If sanitizing produces a field name different from the original value a JSON tag
 ### Lists
   * A list of homogeneous concretely typed values are treated as a list of the concrete type e.g.: `[]float64`
   * Lists of heterogeneous types are treated as a list of the empty interface: `[]interface{}`
-  * Lists with compound elements are treated as an array of structs. Fields of each element are "squashed" into a single struct containing all encountered fields. If a field in one element has a different type in another, the list is treated as a list of the empty interface.
+  * Lists with compound elements are treated as an array of structs.
+    * Fields of each element are "squashed" into a single struct. The result is a array of a struct containing all encountered fields.
+    * If a field in one element has a different type in another of the same list, the offending field is treated as an empty interface.
 
 Examples of all of the above can be found in [example/test.json](example/test.json).
