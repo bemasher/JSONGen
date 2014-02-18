@@ -1,11 +1,83 @@
-package jsongen
+package main
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
 	"go/format"
 	"log"
+	"os"
 	"strings"
 )
+
+const (
+	PrettyPrint = true
+)
+
+var filename string
+
+type Tree struct {
+	Key      Name
+	Kind     Kind
+	Type     Type
+	Children []Tree
+}
+
+// Returns canonical form golang of the type structure.
+func (t Tree) Format() string {
+	str := t.formatHelper(0)
+
+	formatted, err := format.Source([]byte(str))
+	if err != nil {
+		fmt.Println(str)
+		log.Fatal("Error formatting type:", err)
+	}
+
+	return string(formatted)
+}
+
+func (t Tree) formatHelper(depth int) (r string) {
+	var tag string
+
+	if depth != 0 && t.Key.String() != string(t.Key) {
+		tag = fmt.Sprintf("`json:\"%s\"`", string(t.Key))
+	}
+
+	indent := strings.Repeat("\t", depth)
+	r += indent
+	if depth == 0 {
+		r += "type "
+	}
+
+	if t.Kind == Array {
+		r += fmt.Sprintf("%s []%s", t.Key, t.Type)
+		if t.Kind != Struct {
+			r += tag
+			return
+		}
+	}
+
+	if t.Kind == Struct || t.Kind == ArrayOfStruct {
+		if t.Kind == ArrayOfStruct {
+			r += fmt.Sprintf("%s []struct", t.Key)
+		} else {
+			r += fmt.Sprintf("%s struct", t.Key)
+		}
+		r += " {\n"
+		defer func() {
+			r += indent + "} " + tag
+		}()
+
+		for _, f := range t.Children {
+			r += f.formatHelper(depth+1) + "\n"
+		}
+		return
+	}
+
+	r += fmt.Sprintf("%s %s %s", t.Key, t.Type, tag)
+
+	return
+}
 
 // Sanitizes field names.
 type Name string
@@ -36,150 +108,173 @@ func (n Name) String() (s string) {
 	return strings.Title(s)
 }
 
-// Maps some special cases to valid golang types.
-type Kind string
+type Kind byte
+
+const (
+	Primitive Kind = iota
+	Struct
+	Array
+	ArrayOfStruct
+)
 
 func (k Kind) String() string {
-	switch k {
-	case "<nil>":
-		return "string"
-	}
-	return string(k)
+	return []string{"Primitive", "Struct", "Array", "ArrayOfStruct"}[k]
 }
 
-// Used for describing the structure of decoded JSON data.
-type Type struct {
-	Name Name
-	Kind Kind
-	Tag  string
+type Type byte
 
-	IsList     bool
-	IsCompound bool
-	Fields     map[string]Type
-}
+const (
+	Nil Type = iota
+	Bool
+	Number
+	String
+	Interface
+)
 
 func (t Type) String() string {
-	return fmt.Sprintf("{Name:%s Type:%s IsList:%t IsCompound:%t}", t.Name, t.Kind, t.IsList, t.IsCompound)
+	return []string{"nil", "bool", "float64", "string", "interface{}"}[t]
 }
 
-// Returns canonical form golang of the type structure.
-func (t Type) Format() string {
-	str := t.formatHelper(0)
+func (t *Tree) Populate(data interface{}, key string) {
+	t.Key = Name(key)
 
-	formatted, err := format.Source([]byte(str))
-	if err != nil {
-		log.Fatal("Error formatting type:", err)
-	}
-
-	return string(formatted)
-}
-
-func (t Type) formatHelper(depth int) (r string) {
-	if t.Name.String() != string(t.Name) {
-		t.Tag = fmt.Sprintf("`json:\"%s\"`", string(t.Name))
-	}
-
-	indent := strings.Repeat("\t", depth)
-	r += indent
-	if depth == 0 {
-		r += "type "
-		t.IsCompound = true
-	}
-
-	if t.IsList {
-		r += fmt.Sprintf("%s []%s", t.Name, t.Kind)
-		if !t.IsCompound {
-			r += t.Tag
-			return
-		}
-	}
-
-	if t.IsCompound {
-		if !t.IsList {
-			r += fmt.Sprintf("%s struct", t.Name)
-		}
-		r += " {\n"
-		defer func() {
-			r += indent + "}" + t.Tag
-		}()
-
-		for _, f := range t.Fields {
-			r += f.formatHelper(depth+1) + "\n"
-		}
-		return
-	}
-
-	r += fmt.Sprintf("%s %s %s", t.Name, t.Kind, t.Tag)
-
-	return
-}
-
-// Parse takes a string defining the name of the type and an interface{} to populate a type.
-func Parse(name string, data interface{}) (t Type) {
-	t.Name = Name(name)
-
-	// There are three base cases of types: concrete, compound and list.
-	switch T := data.(type) {
-
-	// A compound json object.
+	switch typ := data.(type) {
 	case map[string]interface{}:
-		t.IsCompound = true
-		t.Kind = Kind("struct")
-		t.Fields = make(map[string]Type)
-
-		// Recurse on the compound object's fields.
-		for k, v := range T {
-			t.Fields[k] = Parse(k, v)
+		t.Kind = Struct
+		for k, v := range typ {
+			var child Tree
+			child.Populate(v, k)
+			t.Children = append(t.Children, child)
 		}
-
-	// A list of json objects
 	case []interface{}:
-		t.IsList = true
+		t.Kind = Array
+		for _, v := range typ {
+			var child Tree
+			child.Populate(v, "")
+			t.Children = append(t.Children, child)
+		}
+	case bool:
+		t.Kind = Primitive
+		t.Type = Bool
+	case float64:
+		t.Kind = Primitive
+		t.Type = Number
+	case string:
+		t.Kind = Primitive
+		t.Type = String
+	default:
+		t.Kind = Primitive
+		t.Type = Nil
+	}
+}
 
-		// Determine if the list is homogeneous or not.
-		listTypes := make(map[Kind]bool)
-		for _, i := range T {
-			k := Kind(fmt.Sprintf("%T", i))
-			listTypes[k] = true
-			t.Kind = k
+func (t *Tree) Normalize() {
+	t.NormalizePrimitiveArray()
+	t.NormalizeCompoundArray()
+}
 
-			// If the list has more than one type, it is heterogeneous
-			// and is represented as a list of empty interfaces.
-			if len(listTypes) > 1 {
-				t.Kind = Kind("interface{}")
-				return
+func (t *Tree) NormalizePrimitiveArray() {
+	// Traverse in depth-first order.
+	for idx := range t.Children {
+		t.Children[idx].NormalizePrimitiveArray()
+	}
+
+	if t.Kind == Array {
+		var typ Type
+		isPrimitive := true
+		isHomogeneous := true
+		for _, c := range t.Children {
+			if c.Kind != Primitive {
+				isPrimitive = false
+				isHomogeneous = false
+				break
+			}
+			if typ == Nil {
+				typ = c.Type
+			}
+			if typ != c.Type {
+				isHomogeneous = false
+				break
 			}
 		}
 
-		// If this is a list of compound tags, recurse on each item
-		// and merge fields together from all elements of the list.
-		if t.Kind == Kind("map[string]interface {}") {
-			t.IsCompound = true
-			t.Kind = Kind("struct")
-			t.Fields = make(map[string]Type)
-			for _, i := range T {
-				tmp := Parse(name, i)
-				for k, v := range tmp.Fields {
-					// If we've previously seen this field name and it has a different
-					// type than the last field, then stop parsing and treat list as a
-					// list of empty interfaces.
-					if _, exists := t.Fields[k]; exists && t.Fields[k].Kind != v.Kind {
-						v.Kind = "interface{}"
+		if isPrimitive {
+			if isHomogeneous {
+				t.Type = typ
+			}
+			if !isHomogeneous || len(t.Children) == 0 {
+				t.Type = Interface
+			}
+			t.Children = nil
+		}
+	}
+}
+
+func (t *Tree) NormalizeCompoundArray() {
+	// Traverse in depth-first order.
+	for idx := range t.Children {
+		t.Children[idx].NormalizeCompoundArray()
+	}
+
+	if t.Kind == Array {
+		fields := make(map[Name]Tree)
+		for _, listChild := range t.Children {
+			for _, structChild := range listChild.Children {
+				if _, exists := fields[structChild.Key]; exists {
+					if fields[structChild.Key].Type != structChild.Type {
+						field := fields[structChild.Key]
+						field.Type = Interface
+						fields[structChild.Key] = field
 					}
-					t.Fields[k] = v
+				} else {
+					fields[structChild.Key] = structChild
 				}
 			}
 		}
 
-	// This field must be a concrete type.
-	default:
-		t.Name = Name(name)
-		t.Kind = Kind(fmt.Sprintf("%T", T))
+		if t.Type == Nil {
+			t.Kind = ArrayOfStruct
+			t.Children = nil
+			for _, val := range fields {
+				t.Children = append(t.Children, val)
+			}
+		}
 	}
-
-	return
 }
 
 func init() {
 	log.SetFlags(log.Lshortfile)
+
+	flag.StringVar(&filename, "input", "/dev/stdin", "Filename to parse and generate type from, or omit for stdin.")
+	flag.Parse()
+}
+
+func main() {
+	var (
+		inputFile *os.File
+		err       error
+	)
+	if filename == "/dev/stdin" {
+		inputFile = os.Stdin
+	} else {
+		inputFile, err = os.Open(filename)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		defer inputFile.Close()
+	}
+
+	jsonDecoder := json.NewDecoder(inputFile)
+	var data interface{}
+	err = jsonDecoder.Decode(&data)
+	if err != nil {
+		log.Fatal("error decoding input: ", err)
+	}
+
+	var tree Tree
+	tree.Populate(data, "")
+	tree.Normalize()
+
+	fmt.Println(tree.Format())
 }

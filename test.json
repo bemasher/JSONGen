@@ -1,0 +1,65 @@
+{
+	"nil": null,
+	"foo": "stuff",
+	"bar": 1,
+	"baz": true,
+	"intlist": [0, 1, 2, 3, 4],
+	"stringlist": ["0", "1", "2", "3", "4"],
+	"boollist": [true, false, true, false, true],
+	"compound": {
+		"foo": "stuff",
+		"bar": 1,
+		"baz": true,
+		"intlist": [0, 1, 2, 3, 4],
+		"stringlist": ["0", "1", "2", "3", "4"],
+		"boollist": [true, false, true, false, true]
+	},
+	"compoundlist": [
+		{
+			"foo": "stuff",
+			"bar": 1,
+			"baz": true
+		},
+		{
+			"foo": "stuff",
+			"bar": 1,
+			"baz": true,
+			"intlist": [0, 1, 2, 3, 4],
+			"stringlist": ["0", "1", "2", "3", "4"],
+			"boollist": [true, false, true, false, true]
+		},
+		{
+			"foo": "stuff",
+			"bar": 1,
+			"baz": true,
+			"intlist": [0, 1, 2, 3, 4],
+			"stringlist": ["0", "1", "2", "3", "4"],
+			"boollist": [true, false, true, false, true]
+		},
+		{
+			"foo": "stuff",
+			"bar": 1,
+			"baz": true
+		}
+	],
+	"field-conflict": [
+		{
+			"foo": "stuff",
+			"bar": 1,
+			"baz": true
+		},
+		{
+			"foo": 1,
+			"bar": 1,
+			"baz": true,
+			"intlist": [0, 1, 2, 3, 4],
+			"stringlist": ["0", "1", "2", "3", "4"],
+			"boollist": [true, false, true, false, true]
+		}
+	],
+	"Sanitary": "stuff",
+	"_Sanitary": "stuff",
+	"Sanitary0": "stuff",
+	"0Unsanitary": "stuff",
+	"non-homogeneous": [0, 1, true, false, "stuff", "and", "things"]
+}
