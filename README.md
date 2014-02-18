@@ -9,12 +9,29 @@ t := jsongen.Parse("Test", data)
 
 fmt.Println(t.Format())
 ```
-Using [example/test.json](example/test.json) as input the example will produce:
+Using [test.json](example/test.json) as input the example will produce:
 ```go
-type Test struct {
-	Unsanitary string   `json:"0Unsanitary"`
-	Stringlist []string `json:"stringlist"`
-	Compound   struct {
+type _ struct {
+	Foo            string    `json:"foo"`
+	Intlist        []float64 `json:"intlist"`
+	Field_conflict []struct {
+		Foo        interface{} `json:"foo"`
+		Bar        float64     `json:"bar"`
+		Baz        bool        `json:"baz"`
+		Intlist    []float64   `json:"intlist"`
+		Stringlist []string    `json:"stringlist"`
+		Boollist   []bool      `json:"boollist"`
+	} `json:"field-conflict"`
+	Non_homogeneous []interface{} `json:"non-homogeneous"`
+	Nil             nil           `json:"nil"`
+	Baz             bool          `json:"baz"`
+	Stringlist      []string      `json:"stringlist"`
+	_Sanitary       string
+	Sanitary0       string
+	Unsanitary      string  `json:"0Unsanitary"`
+	Bar             float64 `json:"bar"`
+	Boollist        []bool  `json:"boollist"`
+	Compound        struct {
 		Foo        string    `json:"foo"`
 		Bar        float64   `json:"bar"`
 		Baz        bool      `json:"baz"`
@@ -22,10 +39,7 @@ type Test struct {
 		Stringlist []string  `json:"stringlist"`
 		Boollist   []bool    `json:"boollist"`
 	} `json:"compound"`
-	Nan            string        `json:"nan"`
-	Bar            float64       `json:"bar"`
-	Field_conflict []interface{} `json:"field-conflict"`
-	Compoundlist   []struct {
+	Compoundlist []struct {
 		Foo        string    `json:"foo"`
 		Bar        float64   `json:"bar"`
 		Baz        bool      `json:"baz"`
@@ -33,14 +47,7 @@ type Test struct {
 		Stringlist []string  `json:"stringlist"`
 		Boollist   []bool    `json:"boollist"`
 	} `json:"compoundlist"`
-	Foo             string `json:"foo"`
-	Sanitary0       string
-	Sanitary        string
-	Non_homogeneous []interface{} `json:"non-homogeneous"`
-	Baz             bool          `json:"baz"`
-	Boollist        []bool        `json:"boollist"`
-	_Sanitary       string
-	Intlist         []float64 `json:"intlist"`
+	Sanitary string
 }
 ```
 
@@ -55,10 +62,10 @@ The generated type's name is given by the name parameter in Parse on the first c
   * If sanitizing produces a field name different from the original value a JSON tag is added to the field allowing parsing after the field name has been modified.
 
 ## Types
-### Concrete
-  * Concrete types are parsed and stored as-is.
+### Primitive
+  * Primitive types are parsed and stored as-is.
   * Valid types are bool, float64 and string.
-  * The JSON value `null` is treated as a string.
+  * The JSON value `null` is treated as the empty interface.
 
 ### Compound
   * Compound types are treated as structs.
@@ -67,13 +74,13 @@ The generated type's name is given by the name parameter in Parse on the first c
   * If a compound structure contains duplicate fields of different types, one of the fields is chosen at random. This is due to golang's unordered iteration over map entries. This should never occur since it is not permitted in the JSON specification, but this is the expected behavior should it happen.
 
 ### Lists
-  * A list of homogeneous concretely typed values are treated as a list of the concrete type e.g.: `[]float64`
+  * A homogeneous list of primitive  values are treated as a list of the primitive type e.g.: `[]float64`
   * Lists of heterogeneous types are treated as a list of the empty interface: `[]interface{}`
   * Lists with compound elements are treated as an array of structs.
     * Fields of each element are "squashed" into a single struct. The result is an array of a struct containing all encountered fields.
     * If a field in one element has a different type in another of the same list, the offending field is treated as an empty interface.
 
-Examples of all of the above can be found in [example/test.json](example/test.json).
+Examples of all of the above can be found in [test.json](test.json).
 
 ## Caveats
   * Currently field names within a struct are considered unique based on their unsanitized form. This could be troublesome if sanitizing produces non-unique field names of siblings. This also complicates the handling of field tags in the case of unique unsanitized names which sanitize to non-unique names.
