@@ -54,12 +54,12 @@ Usage of jsongen:
 
 Reading from stdin can be done as follows:
 ```
-	jsongen < test.json
+$ jsongen < test.json
 ```
 
 Reading directly from a file is then:
 ```
-	jsongen -input=test.json
+$ jsongen -input=test.json
 ```
 
 ## Parsing
