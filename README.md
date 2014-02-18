@@ -2,13 +2,6 @@
 JSONGen is a tool for generating native Golang types from JSON objects. This automates what is otherwise a very tedious and error prone task when working with JSON.
 
 ## Usage
-```go
-var data interface{}
-// parse json object into data using either Unmarshal or Decoder.Decode
-t := jsongen.Parse("Test", data)
-
-fmt.Println(t.Format())
-```
 Using [test.json](example/test.json) as input the example will produce:
 ```go
 type _ struct {
@@ -51,10 +44,25 @@ type _ struct {
 }
 ```
 
-## Parsing
-### Top-Level Name
-The generated type's name is given by the name parameter in Parse on the first call.
+## Usage
 
+```
+$ jsongen -h
+Usage of jsongen:
+  -input="/dev/stdin": Filename to parse and generate type from, or omit for stdin.
+```
+
+Reading from stdin can be done as follows:
+```
+	jsongen < test.json
+```
+
+Reading directly from a file is then:
+```
+	jsongen -input=test.json
+```
+
+## Parsing
 ### Field Names
   * Field names are sanitized and written as exported fields of the generated type.
   * If sanitizing produces an empty string the original field name is prefixed with an underscore and only invalid identifier characters are removed.
