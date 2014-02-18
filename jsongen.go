@@ -108,6 +108,7 @@ func (n Name) String() (s string) {
 	return strings.Title(s)
 }
 
+// Type kinds of nodes.
 type Kind byte
 
 const (
@@ -121,6 +122,7 @@ func (k Kind) String() string {
 	return []string{"Primitive", "Struct", "Array", "ArrayOfStruct"}[k]
 }
 
+// Types of nodes.
 type Type byte
 
 const (
@@ -135,6 +137,7 @@ func (t Type) String() string {
 	return []string{"nil", "bool", "float64", "string", "interface{}"}[t]
 }
 
+// Given an empty interface which json has been parsed into, populates the tree.
 func (t *Tree) Populate(data interface{}, key string) {
 	t.Key = Name(key)
 
@@ -168,15 +171,16 @@ func (t *Tree) Populate(data interface{}, key string) {
 	}
 }
 
+// Flattens arrays of both primitive and compound types.
 func (t *Tree) Normalize() {
-	t.NormalizePrimitiveArray()
-	t.NormalizeCompoundArray()
+	t.normalizePrimitiveArray()
+	t.normalizeCompoundArray()
 }
 
-func (t *Tree) NormalizePrimitiveArray() {
+func (t *Tree) normalizePrimitiveArray() {
 	// Traverse in depth-first order.
 	for idx := range t.Children {
-		t.Children[idx].NormalizePrimitiveArray()
+		t.Children[idx].normalizePrimitiveArray()
 	}
 
 	if t.Kind == Array {
@@ -210,10 +214,10 @@ func (t *Tree) NormalizePrimitiveArray() {
 	}
 }
 
-func (t *Tree) NormalizeCompoundArray() {
+func (t *Tree) normalizeCompoundArray() {
 	// Traverse in depth-first order.
 	for idx := range t.Children {
-		t.Children[idx].NormalizeCompoundArray()
+		t.Children[idx].normalizeCompoundArray()
 	}
 
 	if t.Kind == Array {
