@@ -53,8 +53,7 @@ func (t Tree) formatHelper(depth int) (r string) {
 	}
 
 	if t.Kind == Struct || t.Kind == ArrayOfStruct {
-		r += fmt.Sprintf("struct")
-		r += " {\n"
+		r += "struct {\n"
 		defer func() {
 			r += indent + "} " + tag
 		}()
