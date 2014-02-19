@@ -25,7 +25,7 @@ type Tree struct {
 
 // Returns canonical form golang of the type structure.
 func (t Tree) Format() string {
-	str := t.formatHelper(0)
+	str := "type " + t.formatHelper(0)
 
 	formatted, err := format.Source([]byte(str))
 	if err != nil {
@@ -45,24 +45,15 @@ func (t Tree) formatHelper(depth int) (r string) {
 
 	indent := strings.Repeat("\t", depth)
 	r += indent
-	if depth == 0 {
-		r += "type "
-	}
 
-	if t.Kind == Array {
-		r += fmt.Sprintf("%s []%s", t.Key, t.Type)
-		if t.Kind != Struct {
-			r += tag
-			return
-		}
+	r += t.Key.String() + " "
+
+	if t.Kind == Array || t.Kind == ArrayOfStruct {
+		r += fmt.Sprintf("[]")
 	}
 
 	if t.Kind == Struct || t.Kind == ArrayOfStruct {
-		if t.Kind == ArrayOfStruct {
-			r += fmt.Sprintf("%s []struct", t.Key)
-		} else {
-			r += fmt.Sprintf("%s struct", t.Key)
-		}
+		r += fmt.Sprintf("struct")
 		r += " {\n"
 		defer func() {
 			r += indent + "} " + tag
@@ -74,7 +65,11 @@ func (t Tree) formatHelper(depth int) (r string) {
 		return
 	}
 
-	r += fmt.Sprintf("%s %s %s", t.Key, t.Type, tag)
+	if t.Type == Nil {
+		t.Type = Interface
+	}
+
+	r += fmt.Sprintf("%s %s", t.Type, tag)
 
 	return
 }
@@ -236,7 +231,7 @@ func (t *Tree) normalizeCompoundArray() {
 			}
 		}
 
-		if t.Type == Nil {
+		if len(fields) > 0 && t.Type == Nil {
 			t.Kind = ArrayOfStruct
 			t.Children = nil
 			for _, val := range fields {
