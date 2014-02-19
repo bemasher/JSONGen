@@ -2,49 +2,6 @@
 JSONGen is a tool for generating native Golang types from JSON objects. This automates what is otherwise a very tedious and error prone task when working with JSON.
 
 ## Usage
-Using [test.json](example/test.json) as input the example will produce:
-```go
-type _ struct {
-	Foo            string    `json:"foo"`
-	Intlist        []float64 `json:"intlist"`
-	Field_conflict []struct {
-		Foo        interface{} `json:"foo"`
-		Bar        float64     `json:"bar"`
-		Baz        bool        `json:"baz"`
-		Intlist    []float64   `json:"intlist"`
-		Stringlist []string    `json:"stringlist"`
-		Boollist   []bool      `json:"boollist"`
-	} `json:"field-conflict"`
-	Non_homogeneous []interface{} `json:"non-homogeneous"`
-	Nil             nil           `json:"nil"`
-	Baz             bool          `json:"baz"`
-	Stringlist      []string      `json:"stringlist"`
-	_Sanitary       string
-	Sanitary0       string
-	Unsanitary      string  `json:"0Unsanitary"`
-	Bar             float64 `json:"bar"`
-	Boollist        []bool  `json:"boollist"`
-	Compound        struct {
-		Foo        string    `json:"foo"`
-		Bar        float64   `json:"bar"`
-		Baz        bool      `json:"baz"`
-		Intlist    []float64 `json:"intlist"`
-		Stringlist []string  `json:"stringlist"`
-		Boollist   []bool    `json:"boollist"`
-	} `json:"compound"`
-	Compoundlist []struct {
-		Foo        string    `json:"foo"`
-		Bar        float64   `json:"bar"`
-		Baz        bool      `json:"baz"`
-		Intlist    []float64 `json:"intlist"`
-		Stringlist []string  `json:"stringlist"`
-		Boollist   []bool    `json:"boollist"`
-	} `json:"compoundlist"`
-	Sanitary string
-}
-```
-
-## Usage
 
 ```
 $ jsongen -h
@@ -62,6 +19,49 @@ Reading directly from a file is then:
 $ jsongen -input=test.json
 ```
 
+Using [test.json](example/test.json) as input the example will produce:
+```go
+type _ struct {
+	Baz      bool   `json:"baz"`
+	Boollist []bool `json:"boollist"`
+	Compound struct {
+		Foo        string    `json:"foo"`
+		Bar        float64   `json:"bar"`
+		Baz        bool      `json:"baz"`
+		Intlist    []float64 `json:"intlist"`
+		Stringlist []string  `json:"stringlist"`
+		Boollist   []bool    `json:"boollist"`
+	} `json:"compound"`
+	Sanitary        string
+	Non_homogeneous []interface{} `json:"non-homogeneous"`
+	Compoundlist    []struct {
+		Foo        string    `json:"foo"`
+		Bar        float64   `json:"bar"`
+		Baz        bool      `json:"baz"`
+		Intlist    []float64 `json:"intlist"`
+		Stringlist []string  `json:"stringlist"`
+		Boollist   []bool    `json:"boollist"`
+	} `json:"compoundlist"`
+	_Sanitary      string
+	Sanitary0      string
+	Nil            interface{} `json:"nil"`
+	Stringlist     []string    `json:"stringlist"`
+	Foo            string      `json:"foo"`
+	Bar            float64     `json:"bar"`
+	Intlist        []float64   `json:"intlist"`
+	Field_conflict []struct {
+		Foo        interface{} `json:"foo"`
+		Bar        float64     `json:"bar"`
+		Baz        bool        `json:"baz"`
+		Intlist    []float64   `json:"intlist"`
+		Stringlist []string    `json:"stringlist"`
+		Boollist   []bool      `json:"boollist"`
+	} `json:"field-conflict"`
+	Unsanitary string `json:"0Unsanitary"`
+}
+
+```
+
 ## Parsing
 ### Field Names
   * Field names are sanitized and written as exported fields of the generated type.
@@ -73,18 +73,18 @@ $ jsongen -input=test.json
 ### Primitive
   * Primitive types are parsed and stored as-is.
   * Valid types are bool, float64 and string.
-  * The JSON value `null` is treated as the empty interface.
+  * The JSON value `null` is translated to the empty interface.
 
-### Compound
-  * Compound types are treated as structs.
-  * The top-level object must be a compound type.
-  * Fields of compound structures have no guaranteed order.
-  * If a compound structure contains duplicate fields of different types, one of the fields is chosen at random. This is due to golang's unordered iteration over map entries. This should never occur since it is not permitted in the JSON specification, but this is the expected behavior should it happen.
+### Object
+  * Object types are treated as structs.
+  * The top-level object must be either an object or list.
+  * Fields of object structures have no guaranteed order.
+  * If a object structure contains duplicate fields of different types, one of the fields is chosen at random. This is due to golang's unordered iteration over map entries. This should never occur since it is not permitted in the JSON specification, but this is the expected behavior should it happen.
 
 ### Lists
   * A homogeneous list of primitive  values are treated as a list of the primitive type e.g.: `[]float64`
   * Lists of heterogeneous types are treated as a list of the empty interface: `[]interface{}`
-  * Lists with compound elements are treated as an array of structs.
+  * Lists with object elements are treated as an array of structs.
     * Fields of each element are "squashed" into a single struct. The result is an array of a struct containing all encountered fields.
     * If a field in one element has a different type in another of the same list, the offending field is treated as an empty interface.
 
