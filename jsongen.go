@@ -14,7 +14,46 @@ const (
 	PrettyPrint = true
 )
 
-var filename string
+var config Config
+
+type Config struct {
+	dumpFilename string
+
+	dumpFile  *os.File
+	inputFile *os.File
+
+	titleCase bool
+	normalize bool
+}
+
+func (c *Config) Parse() (err error) {
+	flag.StringVar(&config.dumpFilename, "dump", os.DevNull, "Dump tree structure to file.")
+	flag.BoolVar(&config.normalize, "normalize", true, "Squash arrays of struct and determine primitive array type.")
+	flag.BoolVar(&config.titleCase, "title", true, "Convert identifiers to title case, treating '_' and '-' as word boundaries.")
+
+	flag.Parse()
+
+	if flag.NArg() == 0 {
+		config.inputFile = os.Stdin
+	} else {
+		config.inputFile, err = os.Open(flag.Arg(0))
+		if err != nil {
+			return
+		}
+	}
+
+	c.dumpFile, err = os.Create(c.dumpFilename)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (c Config) Close() {
+	c.dumpFile.Close()
+	c.inputFile.Close()
+}
 
 type Tree struct {
 	Key      Name
@@ -64,11 +103,7 @@ func (t Tree) formatHelper(depth int) (r string) {
 		return
 	}
 
-	if t.Type == Nil {
-		t.Type = Interface
-	}
-
-	r += fmt.Sprintf("%s %s", t.Type, tag)
+	r += fmt.Sprintf("%s %s", t.Type.Repr(), tag)
 
 	return
 }
@@ -90,11 +125,18 @@ func (n Name) String() (s string) {
 			return r
 		}
 		if r == '_' || r == '-' {
-			return '_'
+			if config.titleCase {
+				return ' '
+			} else {
+				return '_'
+			}
 		}
 		return -1
 	}
 	s = strings.Map(valid, s)
+
+	s = strings.Title(s)
+	s = strings.Replace(s, " ", "", -1)
 
 	if len(s) == 0 {
 		return "_" + strings.Map(valid, string(n))
@@ -116,6 +158,11 @@ func (k Kind) String() string {
 	return []string{"Primitive", "Struct", "Array", "ArrayOfStruct"}[k]
 }
 
+func (k Kind) MarshalText() (text []byte, err error) {
+	text = []byte(k.String())
+	return
+}
+
 // Types of nodes.
 type Type byte
 
@@ -128,7 +175,16 @@ const (
 )
 
 func (t Type) String() string {
-	return []string{"nil", "bool", "float64", "string", "interface{}"}[t]
+	return []string{"Null", "Bool", "Number", "String", "Unknown"}[t]
+}
+
+func (t Type) Repr() string {
+	return []string{"interface{}", "bool", "float64", "string", "interface{}"}[t]
+}
+
+func (t Type) MarshalText() (text []byte, err error) {
+	text = []byte(t.String())
+	return
 }
 
 // Given an empty interface which json has been parsed into, populates the tree.
@@ -243,36 +299,36 @@ func (t *Tree) normalizeCompoundArray() {
 func init() {
 	log.SetFlags(log.Lshortfile)
 
-	flag.StringVar(&filename, "input", "/dev/stdin", "Filename to parse and generate type from, or omit for stdin.")
-	flag.Parse()
+	if err := config.Parse(); err != nil {
+		log.Fatal("Error parsing flags:", err)
+	}
 }
 
 func main() {
-	var (
-		inputFile *os.File
-		err       error
-	)
-	if filename == "/dev/stdin" {
-		inputFile = os.Stdin
-	} else {
-		inputFile, err = os.Open(filename)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		defer inputFile.Close()
-	}
+	defer config.Close()
 
-	jsonDecoder := json.NewDecoder(inputFile)
+	jsonDecoder := json.NewDecoder(config.inputFile)
 	var data interface{}
-	err = jsonDecoder.Decode(&data)
+	err := jsonDecoder.Decode(&data)
 	if err != nil {
-		log.Fatal("error decoding input: ", err)
+		log.Fatal("Error decoding input: ", err)
 	}
 
 	var tree Tree
 	tree.Populate(data, "")
-	tree.Normalize()
+	if config.normalize {
+		tree.Normalize()
+	}
+
+	indented, err := json.MarshalIndent(tree, "", "\t")
+	if err != nil {
+		log.Fatal("Error encoding tree:", err)
+	}
+
+	_, err = config.dumpFile.Write(indented)
+	if err != nil {
+		log.Fatal("Error dumping tree:", err)
+	}
 
 	fmt.Println(tree.Format())
 }

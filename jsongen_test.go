@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -460,9 +461,24 @@ func TestCompoundListFormat(t *testing.T) {
 
 func TestIdentifierSanitizer(t *testing.T) {
 	sanitary := []string{"Sanitary", "_Sanitary", "Sanitary0"}
+	titleReplacer := strings.NewReplacer("_", "", "-", "")
+
 	for _, id := range sanitary {
-		if id != Name(id).String() {
-			t.Fail()
+		expected := id
+
+		config.titleCase = false
+		sanitized := Name(id).String()
+
+		if expected != sanitized {
+			t.Fatalf("Expected: %q Got: %q\n", expected, sanitized)
+		}
+
+		config.titleCase = true
+		expected = titleReplacer.Replace(expected)
+		sanitized = Name(id).String()
+
+		if expected != sanitized {
+			t.Fatalf("Expected: %q Got: %q\n", expected, sanitized)
 		}
 	}
 
