@@ -6,25 +6,30 @@ JSONGen is a tool for generating native Golang types from JSON objects. This aut
 ```
 $ jsongen -h
 Usage of jsongen:
-  -input="/dev/stdin": Filename to parse and generate type from, or omit for stdin.
+  -dump="NUL": Dump tree structure to file.
+  -normalize=true: Squash arrays of struct and determine primitive array type.
+  -title=true: Convert identifiers to title case, treating '_' and '-' as word boundaries.
 ```
 
 Reading from stdin can be done as follows:
 ```
-$ jsongen < test.json
+$ cat test.json | jsongen
 ```
 
-Reading directly from a file is then:
+Or a filename can be passed:
 ```
-$ jsongen -input=test.json
+$ jsongen test.json
 ```
 
 Using [test.json](example/test.json) as input the example will produce:
 ```go
 type _ struct {
-	Baz      bool   `json:"baz"`
-	Boollist []bool `json:"boollist"`
-	Compound struct {
+	Foo        string  `json:"foo"`
+	Bar        float64 `json:"bar"`
+	Sanitary0  string
+	Baz        bool     `json:"baz"`
+	Stringlist []string `json:"stringlist"`
+	Compound   struct {
 		Foo        string    `json:"foo"`
 		Bar        float64   `json:"bar"`
 		Baz        bool      `json:"baz"`
@@ -32,24 +37,7 @@ type _ struct {
 		Stringlist []string  `json:"stringlist"`
 		Boollist   []bool    `json:"boollist"`
 	} `json:"compound"`
-	Sanitary        string
-	Non_homogeneous []interface{} `json:"non-homogeneous"`
-	Compoundlist    []struct {
-		Foo        string    `json:"foo"`
-		Bar        float64   `json:"bar"`
-		Baz        bool      `json:"baz"`
-		Intlist    []float64 `json:"intlist"`
-		Stringlist []string  `json:"stringlist"`
-		Boollist   []bool    `json:"boollist"`
-	} `json:"compoundlist"`
-	_Sanitary      string
-	Sanitary0      string
-	Nil            interface{} `json:"nil"`
-	Stringlist     []string    `json:"stringlist"`
-	Foo            string      `json:"foo"`
-	Bar            float64     `json:"bar"`
-	Intlist        []float64   `json:"intlist"`
-	Field_conflict []struct {
+	FieldConflict []struct {
 		Foo        interface{} `json:"foo"`
 		Bar        float64     `json:"bar"`
 		Baz        bool        `json:"baz"`
@@ -57,9 +45,22 @@ type _ struct {
 		Stringlist []string    `json:"stringlist"`
 		Boollist   []bool      `json:"boollist"`
 	} `json:"field-conflict"`
-	Unsanitary string `json:"0Unsanitary"`
+	Compoundlist []struct {
+		Foo        string    `json:"foo"`
+		Bar        float64   `json:"bar"`
+		Baz        bool      `json:"baz"`
+		Intlist    []float64 `json:"intlist"`
+		Stringlist []string  `json:"stringlist"`
+		Boollist   []bool    `json:"boollist"`
+	} `json:"compoundlist"`
+	Sanitary       string        `json:"_Sanitary"`
+	Unsanitary     string        `json:"0Unsanitary"`
+	NonHomogeneous []interface{} `json:"non-homogeneous"`
+	Nil            interface{}   `json:"nil"`
+	Intlist        []float64     `json:"intlist"`
+	Boollist       []bool        `json:"boollist"`
+	Sanitary       string
 }
-
 ```
 
 ## Parsing
@@ -68,6 +69,7 @@ type _ struct {
   * If sanitizing produces an empty string the original field name is prefixed with an underscore and only invalid identifier characters are removed.
     * The initial sanitizing method trims digits from the left of the identifier. This step performed on a field name of "12345" would produce an empty string. At this point the field name is instead stripped of only invalid characters like punctuation and prefixed with an underscore.
   * If sanitizing produces a field name different from the original value a JSON tag is added to the field allowing parsing after the field name has been modified.
+  * Field names are converted to title case treating '_' and '-' as word boundaries along with spaces.
 
 ## Types
 ### Primitive
