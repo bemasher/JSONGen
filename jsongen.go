@@ -169,17 +169,18 @@ type Type byte
 const (
 	Nil Type = iota
 	Bool
-	Number
+	IntNumber
+	FloatNumber
 	String
 	Interface
 )
 
 func (t Type) String() string {
-	return []string{"Null", "Bool", "Number", "String", "Unknown"}[t]
+	return []string{"Null", "Bool", "Intnumber", "FloatNumber", "String", "Unknown"}[t]
 }
 
 func (t Type) Repr() string {
-	return []string{"interface{}", "bool", "float64", "string", "interface{}"}[t]
+	return []string{"interface{}", "bool", "int", "float64", "string", "interface{}"}[t]
 }
 
 func (t Type) MarshalText() (text []byte, err error) {
@@ -210,11 +211,21 @@ func (t *Tree) Populate(data interface{}, key string) {
 		t.Kind = Primitive
 		t.Type = Bool
 	case float64:
+		// unused branch
 		t.Kind = Primitive
-		t.Type = Number
+		t.Type = FloatNumber
 	case string:
 		t.Kind = Primitive
 		t.Type = String
+	case json.Number:
+		_, err := data.(json.Number).Int64()
+		if err != nil {
+                    t.Kind = Primitive
+		    t.Type = FloatNumber
+		} else {
+		    t.Kind = Primitive
+		    t.Type = IntNumber
+		}
 	default:
 		t.Kind = Primitive
 		t.Type = Nil
@@ -308,6 +319,7 @@ func main() {
 	defer config.Close()
 
 	jsonDecoder := json.NewDecoder(config.inputFile)
+	jsonDecoder.UseNumber()
 	var data interface{}
 	err := jsonDecoder.Decode(&data)
 	if err != nil {
