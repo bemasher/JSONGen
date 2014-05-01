@@ -169,18 +169,18 @@ type Type byte
 const (
 	Nil Type = iota
 	Bool
-	IntNumber
-	FloatNumber
+	Int
+	Float
 	String
 	Interface
 )
 
 func (t Type) String() string {
-	return []string{"Null", "Bool", "Intnumber", "FloatNumber", "String", "Unknown"}[t]
+	return []string{"Null", "Bool", "Int", "Float", "String", "Unknown"}[t]
 }
 
 func (t Type) Repr() string {
-	return []string{"interface{}", "bool", "int", "float64", "string", "interface{}"}[t]
+	return []string{"interface{}", "bool", "int64", "float64", "string", "interface{}"}[t]
 }
 
 func (t Type) MarshalText() (text []byte, err error) {
@@ -191,6 +191,9 @@ func (t Type) MarshalText() (text []byte, err error) {
 // Given an empty interface which json has been parsed into, populates the tree.
 func (t *Tree) Populate(data interface{}, key string) {
 	t.Key = Name(key)
+
+	// Assume primitive, will be changed if not
+	t.Kind = Primitive
 
 	switch typ := data.(type) {
 	case map[string]interface{}:
@@ -208,26 +211,17 @@ func (t *Tree) Populate(data interface{}, key string) {
 			t.Children = append(t.Children, child)
 		}
 	case bool:
-		t.Kind = Primitive
 		t.Type = Bool
-	case float64:
-		// unused branch
-		t.Kind = Primitive
-		t.Type = FloatNumber
 	case string:
-		t.Kind = Primitive
 		t.Type = String
 	case json.Number:
 		_, err := data.(json.Number).Int64()
 		if err != nil {
-                    t.Kind = Primitive
-		    t.Type = FloatNumber
+			t.Type = Float
 		} else {
-		    t.Kind = Primitive
-		    t.Type = IntNumber
+			t.Type = Int
 		}
 	default:
-		t.Kind = Primitive
 		t.Type = Nil
 	}
 }

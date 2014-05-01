@@ -4,6 +4,7 @@
 	"bar": 1,
 	"baz": true,
 	"intlist": [0, 1, 2, 3, 4],
+	"floatlist": [0.0, 1.0, 2.0, 3.0, 4.0],
 	"stringlist": ["0", "1", "2", "3", "4"],
 	"boollist": [true, false, true, false, true],
 	"compound": {

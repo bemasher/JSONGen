@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 	"strings"
@@ -9,7 +10,12 @@ import (
 
 func ParseTree(raw []byte) (tree Tree, err error) {
 	var data interface{}
-	err = json.Unmarshal(raw, &data)
+
+	buf := bytes.NewBuffer(raw)
+	jsonDecoder := json.NewDecoder(buf)
+	jsonDecoder.UseNumber()
+
+	err = jsonDecoder.Decode(&data)
 
 	if err != nil {
 		return
@@ -64,12 +70,31 @@ func TestBool(t *testing.T) {
 	}
 }
 
-func TestNumber(t *testing.T) {
+func TestInt(t *testing.T) {
 	testCases := [][]byte{
 		[]byte(`{"Foo":0}`),
 		[]byte(`{"Foo":1}`),
 		[]byte(`{"Foo":-1}`),
+	}
 
+	for _, testCase := range testCases {
+		tree, err := ParseTree(testCase)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expected := Tree{Key: "", Kind: Struct, Children: []Tree{
+			Tree{Key: "Foo", Kind: Primitive, Type: Int},
+		}}
+		if !reflect.DeepEqual(tree, expected) {
+			t.Fatalf("Expected: %+v Got: %#v", expected, tree)
+		}
+	}
+}
+
+func TestFloat(t *testing.T) {
+	testCases := [][]byte{
 		[]byte(`{"Foo":0.0}`),
 		[]byte(`{"Foo":1.0}`),
 		[]byte(`{"Foo":-1.0}`),
@@ -83,7 +108,7 @@ func TestNumber(t *testing.T) {
 		}
 
 		expected := Tree{Key: "", Kind: Struct, Children: []Tree{
-			Tree{Key: "Foo", Kind: Primitive, Type: Number},
+			Tree{Key: "Foo", Kind: Primitive, Type: Float},
 		}}
 		if !reflect.DeepEqual(tree, expected) {
 			t.Fatalf("Expected: %+v Got: %#v", expected, tree)
@@ -142,7 +167,7 @@ func TestBoolList(t *testing.T) {
 	}
 }
 
-func TestNumberList(t *testing.T) {
+func TestIntList(t *testing.T) {
 	testCases := [][]byte{
 		[]byte(`{"Foo":[0]}`),
 		[]byte(`{"Foo":[1]}`),
@@ -151,7 +176,27 @@ func TestNumberList(t *testing.T) {
 		[]byte(`{"Foo":[0,1]}`),
 		[]byte(`{"Foo":[1,-1]}`),
 		[]byte(`{"Foo":[-1,0]}`),
+	}
 
+	for _, testCase := range testCases {
+		tree, err := ParseTree(testCase)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expected := Tree{Key: "", Kind: Struct, Children: []Tree{
+			Tree{Key: "Foo", Kind: Array, Type: Int},
+		}}
+
+		if !reflect.DeepEqual(tree, expected) {
+			t.Fatalf("Expected: %+v Got: %#v", expected, tree)
+		}
+	}
+}
+
+func TestFloatList(t *testing.T) {
+	testCases := [][]byte{
 		[]byte(`{"Foo":[0.0]}`),
 		[]byte(`{"Foo":[1.0]}`),
 		[]byte(`{"Foo":[-1.0]}`),
@@ -169,7 +214,7 @@ func TestNumberList(t *testing.T) {
 		}
 
 		expected := Tree{Key: "", Kind: Struct, Children: []Tree{
-			Tree{Key: "Foo", Kind: Array, Type: Number},
+			Tree{Key: "Foo", Kind: Array, Type: Float},
 		}}
 
 		if !reflect.DeepEqual(tree, expected) {
@@ -214,10 +259,12 @@ func TestCompound(t *testing.T) {
 	testCases := [][]byte{
 		[]byte(`{
 			"Foo": true,
-			"Bar": 1,
+			"BarI": 1,
+			"BarF": 1.0,
 			"Baz": "a",
 			"FooList": [true, false, true, false, true],
-			"BarList": [0, 1, 2, 3, 4],
+			"BarIList": [0, 1, 2, 3, 4],
+			"BarFList": [0.0, 1.0, 2.0, 3.0, 4.0],
 			"BazList": ["0", "1", "2", "3", "4"]
 		}`),
 	}
@@ -231,10 +278,12 @@ func TestCompound(t *testing.T) {
 
 		expected := Tree{Key: "", Kind: Struct, Children: []Tree{
 			Tree{Key: "Foo", Kind: Primitive, Type: Bool},
-			Tree{Key: "Bar", Kind: Primitive, Type: Number},
+			Tree{Key: "BarI", Kind: Primitive, Type: Int},
+			Tree{Key: "BarF", Kind: Primitive, Type: Float},
 			Tree{Key: "Baz", Kind: Primitive, Type: String},
 			Tree{Key: "FooList", Kind: Array, Type: Bool},
-			Tree{Key: "BarList", Kind: Array, Type: Number},
+			Tree{Key: "BarIList", Kind: Array, Type: Int},
+			Tree{Key: "BarFList", Kind: Array, Type: Float},
 			Tree{Key: "BazList", Kind: Array, Type: String},
 		}}
 
@@ -249,28 +298,34 @@ func TestCompoundList(t *testing.T) {
 		[]byte(`[
 			{
 				"Foo": true,
-				"Bar": 1,
+				"BarI": 1,
+				"BarF": 1.0,
 				"Baz": "a"
 			},
 			{
 				"Foo": true,
-				"Bar": 1,
+				"BarI": 1,
+				"BarF": 1.0,
 				"Baz": "a",
 				"FooList": [true, false, true, false, true],
-				"BarList": [0, 1, 2, 3, 4],
+				"BarIList": [0, 1, 2, 3, 4],
+				"BarFList": [0.0, 1.0, 2.0, 3.0, 4.0],
 				"BazList": ["0", "1", "2", "3", "4"]
 			},
 			{
 				"Baz": "a",
-				"Bar": 1,
+				"BarI": 1,
+				"BarF": 1.0,
 				"Foo": true,
 				"FooList": [true, false, true, false, true],
-				"BarList": [0, 1, 2, 3, 4],
+				"BarIList": [0, 1, 2, 3, 4],
+				"BarFList": [0.0, 1.0, 2.0, 3.0, 4.0],
 				"BazList": ["0", "1", "2", "3", "4"]
 			},
 			{
 				"Baz": "a",
-				"Bar": 1,
+				"BarI": 1,
+				"BarF": 1.0,
 				"Foo": true
 			}
 		]`),
@@ -285,10 +340,12 @@ func TestCompoundList(t *testing.T) {
 
 		expected := Tree{Key: "", Kind: ArrayOfStruct, Children: []Tree{
 			Tree{Key: "Foo", Kind: Primitive, Type: Bool},
-			Tree{Key: "Bar", Kind: Primitive, Type: Number},
+			Tree{Key: "BarI", Kind: Primitive, Type: Int},
+			Tree{Key: "BarF", Kind: Primitive, Type: Float},
 			Tree{Key: "Baz", Kind: Primitive, Type: String},
 			Tree{Key: "FooList", Kind: Array, Type: Bool},
-			Tree{Key: "BarList", Kind: Array, Type: Number},
+			Tree{Key: "BarIList", Kind: Array, Type: Int},
+			Tree{Key: "BarFList", Kind: Array, Type: Float},
 			Tree{Key: "BazList", Kind: Array, Type: String},
 		}}
 
@@ -365,9 +422,21 @@ func TestBoolFormat(t *testing.T) {
 	}
 }
 
-func TestNumberFormat(t *testing.T) {
+func TestIntFormat(t *testing.T) {
 	tree := Tree{Key: "", Kind: Struct, Children: []Tree{
-		Tree{Key: "Foo", Kind: Primitive, Type: Number},
+		Tree{Key: "Foo", Kind: Primitive, Type: Int},
+	}}
+
+	expected := "type _ struct {\n\tFoo int64\n} "
+	got := tree.Format()
+	if got != expected {
+		t.Fatalf("Expected: %q Got: %q", expected, got)
+	}
+}
+
+func TestFloatFormat(t *testing.T) {
+	tree := Tree{Key: "", Kind: Struct, Children: []Tree{
+		Tree{Key: "Foo", Kind: Primitive, Type: Float},
 	}}
 
 	expected := "type _ struct {\n\tFoo float64\n} "
@@ -401,9 +470,21 @@ func TestBoolListFormat(t *testing.T) {
 	}
 }
 
-func TestNumberListFormat(t *testing.T) {
+func TestIntListFormat(t *testing.T) {
 	tree := Tree{Key: "", Kind: Struct, Children: []Tree{
-		Tree{Key: "Foo", Kind: Array, Type: Number},
+		Tree{Key: "Foo", Kind: Array, Type: Int},
+	}}
+
+	expected := "type _ struct {\n\tFoo []int64\n} "
+	got := tree.Format()
+	if got != expected {
+		t.Fatalf("Expected: %q Got: %q", expected, got)
+	}
+}
+
+func TestFloatListFormat(t *testing.T) {
+	tree := Tree{Key: "", Kind: Struct, Children: []Tree{
+		Tree{Key: "Foo", Kind: Array, Type: Float},
 	}}
 
 	expected := "type _ struct {\n\tFoo []float64\n} "
@@ -428,14 +509,16 @@ func TestStringListFormat(t *testing.T) {
 func TestCompoundFormat(t *testing.T) {
 	tree := Tree{Key: "", Kind: Struct, Children: []Tree{
 		Tree{Key: "Foo", Kind: Primitive, Type: Bool},
-		Tree{Key: "Bar", Kind: Primitive, Type: Number},
+		Tree{Key: "BarI", Kind: Primitive, Type: Int},
+		Tree{Key: "BarF", Kind: Primitive, Type: Float},
 		Tree{Key: "Baz", Kind: Primitive, Type: String},
 		Tree{Key: "FooList", Kind: Array, Type: Bool},
-		Tree{Key: "BarList", Kind: Array, Type: Number},
+		Tree{Key: "BarIList", Kind: Array, Type: Int},
+		Tree{Key: "BarFList", Kind: Array, Type: Float},
 		Tree{Key: "BazList", Kind: Array, Type: String},
 	}}
 
-	expected := "type _ struct {\n\tFoo     bool\n\tBar     float64\n\tBaz     string\n\tFooList []bool\n\tBarList []float64\n\tBazList []string\n} "
+	expected := "type _ struct {\n\tFoo      bool\n\tBarI     int64\n\tBarF     float64\n\tBaz      string\n\tFooList  []bool\n\tBarIList []int64\n\tBarFList []float64\n\tBazList  []string\n} "
 	got := tree.Format()
 	if got != expected {
 		t.Fatalf("Expected: %q Got: %q", expected, got)
@@ -445,14 +528,16 @@ func TestCompoundFormat(t *testing.T) {
 func TestCompoundListFormat(t *testing.T) {
 	tree := Tree{Key: "", Kind: ArrayOfStruct, Children: []Tree{
 		Tree{Key: "Foo", Kind: Primitive, Type: Bool},
-		Tree{Key: "Bar", Kind: Primitive, Type: Number},
+		Tree{Key: "BarI", Kind: Primitive, Type: Int},
+		Tree{Key: "BarF", Kind: Primitive, Type: Float},
 		Tree{Key: "Baz", Kind: Primitive, Type: String},
 		Tree{Key: "FooList", Kind: Array, Type: Bool},
-		Tree{Key: "BarList", Kind: Array, Type: Number},
+		Tree{Key: "BarIList", Kind: Array, Type: Int},
+		Tree{Key: "BarFList", Kind: Array, Type: Float},
 		Tree{Key: "BazList", Kind: Array, Type: String},
 	}}
 
-	expected := "type _ []struct {\n\tFoo     bool\n\tBar     float64\n\tBaz     string\n\tFooList []bool\n\tBarList []float64\n\tBazList []string\n} "
+	expected := "type _ []struct {\n\tFoo      bool\n\tBarI     int64\n\tBarF     float64\n\tBaz      string\n\tFooList  []bool\n\tBarIList []int64\n\tBarFList []float64\n\tBazList  []string\n} "
 	got := tree.Format()
 	if got != expected {
 		t.Fatalf("Expected: %q Got: %q", expected, got)
@@ -493,14 +578,16 @@ func TestIdentifierSanitizer(t *testing.T) {
 func TestCompoundTagFormat(t *testing.T) {
 	tree := Tree{Key: "", Kind: Struct, Children: []Tree{
 		Tree{Key: "foo", Kind: Primitive, Type: Bool},
-		Tree{Key: "bar", Kind: Primitive, Type: Number},
+		Tree{Key: "bari", Kind: Primitive, Type: Int},
+		Tree{Key: "barf", Kind: Primitive, Type: Float},
 		Tree{Key: "baz", Kind: Primitive, Type: String},
 		Tree{Key: "foolist", Kind: Array, Type: Bool},
-		Tree{Key: "barlist", Kind: Array, Type: Number},
+		Tree{Key: "barilist", Kind: Array, Type: Int},
+		Tree{Key: "barflist", Kind: Array, Type: Float},
 		Tree{Key: "bazlist", Kind: Array, Type: String},
 	}}
 
-	expected := "type _ struct {\n\tFoo     bool      `json:\"foo\"`\n\tBar     float64   `json:\"bar\"`\n\tBaz     string    `json:\"baz\"`\n\tFoolist []bool    `json:\"foolist\"`\n\tBarlist []float64 `json:\"barlist\"`\n\tBazlist []string  `json:\"bazlist\"`\n} "
+	expected := "type _ struct {\n\tFoo      bool      `json:\"foo\"`\n\tBari     int64     `json:\"bari\"`\n\tBarf     float64   `json:\"barf\"`\n\tBaz      string    `json:\"baz\"`\n\tFoolist  []bool    `json:\"foolist\"`\n\tBarilist []int64   `json:\"barilist\"`\n\tBarflist []float64 `json:\"barflist\"`\n\tBazlist  []string  `json:\"bazlist\"`\n} "
 	got := tree.Format()
 	if got != expected {
 		t.Fatalf("Expected: %q Got: %q", expected, got)

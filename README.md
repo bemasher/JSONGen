@@ -24,43 +24,44 @@ $ jsongen test.json
 Using [test.json](example/test.json) as input the example will produce:
 ```go
 type _ struct {
-	Foo        string  `json:"foo"`
-	Bar        float64 `json:"bar"`
-	Sanitary0  string
-	Baz        bool     `json:"baz"`
-	Stringlist []string `json:"stringlist"`
-	Compound   struct {
-		Foo        string    `json:"foo"`
-		Bar        float64   `json:"bar"`
-		Baz        bool      `json:"baz"`
-		Intlist    []float64 `json:"intlist"`
-		Stringlist []string  `json:"stringlist"`
-		Boollist   []bool    `json:"boollist"`
+	Baz            bool      `json:"baz"`
+	Floatlist      []float64 `json:"floatlist"`
+	Sanitary       string
+	Sanitary0      string
+	NonHomogeneous []interface{} `json:"non-homogeneous"`
+	Compound       struct {
+		Foo        string   `json:"foo"`
+		Bar        int64    `json:"bar"`
+		Baz        bool     `json:"baz"`
+		Intlist    []int64  `json:"intlist"`
+		Stringlist []string `json:"stringlist"`
+		Boollist   []bool   `json:"boollist"`
 	} `json:"compound"`
+	Sanitary      string      `json:"_Sanitary"`
+	Nil           interface{} `json:"nil"`
+	Intlist       []int64     `json:"intlist"`
+	Stringlist    []string    `json:"stringlist"`
+	Boollist      []bool      `json:"boollist"`
 	FieldConflict []struct {
 		Foo        interface{} `json:"foo"`
-		Bar        float64     `json:"bar"`
+		Bar        int64       `json:"bar"`
 		Baz        bool        `json:"baz"`
-		Intlist    []float64   `json:"intlist"`
+		Intlist    []int64     `json:"intlist"`
 		Stringlist []string    `json:"stringlist"`
 		Boollist   []bool      `json:"boollist"`
 	} `json:"field-conflict"`
+	Foo          string `json:"foo"`
+	Bar          int64  `json:"bar"`
 	Compoundlist []struct {
-		Foo        string    `json:"foo"`
-		Bar        float64   `json:"bar"`
-		Baz        bool      `json:"baz"`
-		Intlist    []float64 `json:"intlist"`
-		Stringlist []string  `json:"stringlist"`
-		Boollist   []bool    `json:"boollist"`
+		Foo        string   `json:"foo"`
+		Bar        int64    `json:"bar"`
+		Baz        bool     `json:"baz"`
+		Intlist    []int64  `json:"intlist"`
+		Stringlist []string `json:"stringlist"`
+		Boollist   []bool   `json:"boollist"`
 	} `json:"compoundlist"`
-	Sanitary       string        `json:"_Sanitary"`
-	Unsanitary     string        `json:"0Unsanitary"`
-	NonHomogeneous []interface{} `json:"non-homogeneous"`
-	Nil            interface{}   `json:"nil"`
-	Intlist        []float64     `json:"intlist"`
-	Boollist       []bool        `json:"boollist"`
-	Sanitary       string
-}
+	Unsanitary string `json:"0Unsanitary"`
+} 
 ```
 
 ## Parsing
@@ -74,7 +75,7 @@ type _ struct {
 ## Types
 ### Primitive
   * Primitive types are parsed and stored as-is.
-  * Valid types are bool, float64 and string.
+  * Valid types are bool, int64, float64 and string.
   * The JSON value `null` is translated to the empty interface.
 
 ### Object
