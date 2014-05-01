@@ -21,7 +21,7 @@ Or a filename can be passed:
 $ jsongen test.json
 ```
 
-Using [test.json](example/test.json) as input the example will produce:
+Using [test.json](test.json) as input the example will produce:
 ```go
 type _ struct {
 	Baz            bool      `json:"baz"`
