@@ -1,6 +1,8 @@
 ## Purpose
 JSONGen is a tool for generating native Golang types from JSON objects. This automates what is otherwise a very tedious and error prone task when working with JSON.
 
+[![Build Status](https://travis-ci.org/bemasher/JSONGen.svg?branch=master)](https://travis-ci.org/bemasher/JSONGen)
+
 ## Usage
 
 ```
