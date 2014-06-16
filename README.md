@@ -24,43 +24,43 @@ $ jsongen test.json
 Using [test.json](test.json) as input the example will produce:
 ```go
 type _ struct {
-	Baz            bool      `json:"baz"`
-	Floatlist      []float64 `json:"floatlist"`
-	Sanitary       string
-	Sanitary0      string
-	NonHomogeneous []interface{} `json:"non-homogeneous"`
-	Compound       struct {
-		Foo        string   `json:"foo"`
-		Bar        int64    `json:"bar"`
-		Baz        bool     `json:"baz"`
-		Intlist    []int64  `json:"intlist"`
-		Stringlist []string `json:"stringlist"`
-		Boollist   []bool   `json:"boollist"`
-	} `json:"compound"`
-	Sanitary      string      `json:"_Sanitary"`
-	Nil           interface{} `json:"nil"`
-	Intlist       []int64     `json:"intlist"`
-	Stringlist    []string    `json:"stringlist"`
-	Boollist      []bool      `json:"boollist"`
-	FieldConflict []struct {
-		Foo        interface{} `json:"foo"`
-		Bar        int64       `json:"bar"`
-		Baz        bool        `json:"baz"`
-		Intlist    []int64     `json:"intlist"`
-		Stringlist []string    `json:"stringlist"`
-		Boollist   []bool      `json:"boollist"`
-	} `json:"field-conflict"`
-	Foo          string `json:"foo"`
-	Bar          int64  `json:"bar"`
+	Foo          string    `json:"foo"`
+	Intlist      []int     `json:"intlist"`
+	Floatlist    []float64 `json:"floatlist"`
 	Compoundlist []struct {
 		Foo        string   `json:"foo"`
-		Bar        int64    `json:"bar"`
+		Bar        int      `json:"bar"`
 		Baz        bool     `json:"baz"`
-		Intlist    []int64  `json:"intlist"`
+		Intlist    []int    `json:"intlist"`
 		Stringlist []string `json:"stringlist"`
 		Boollist   []bool   `json:"boollist"`
 	} `json:"compoundlist"`
-	Unsanitary string `json:"0Unsanitary"`
+	FieldConflict []struct {
+		Foo        interface{} `json:"foo"`
+		Bar        int         `json:"bar"`
+		Baz        bool        `json:"baz"`
+		Intlist    []int       `json:"intlist"`
+		Stringlist []string    `json:"stringlist"`
+		Boollist   []bool      `json:"boollist"`
+	} `json:"field-conflict"`
+	Stringlist []string    `json:"stringlist"`
+	Sanitary   string      `json:"_Sanitary"`
+	Nil        interface{} `json:"nil"`
+	Bar        int         `json:"bar"`
+	Boollist   []bool      `json:"boollist"`
+	Compound   struct {
+		Foo        string   `json:"foo"`
+		Bar        int      `json:"bar"`
+		Baz        bool     `json:"baz"`
+		Intlist    []int    `json:"intlist"`
+		Stringlist []string `json:"stringlist"`
+		Boollist   []bool   `json:"boollist"`
+	} `json:"compound"`
+	Sanitary0      string
+	Baz            bool `json:"baz"`
+	Sanitary       string
+	Unsanitary     string        `json:"0Unsanitary"`
+	NonHomogeneous []interface{} `json:"non-homogeneous"`
 } 
 ```
 
