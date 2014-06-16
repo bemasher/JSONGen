@@ -1,6 +1,8 @@
 ## Purpose
 JSONGen is a tool for generating native Golang types from JSON objects. This automates what is otherwise a very tedious and error prone task when working with JSON.
 
+[![Build Status](https://travis-ci.org/bemasher/JSONGen.svg?branch=master)](https://travis-ci.org/bemasher/JSONGen)
+
 ## Usage
 
 ```
@@ -96,3 +98,6 @@ Examples of all of the above can be found in [test.json](test.json).
 ## Caveats
   * Currently field names within a struct are considered unique based on their unsanitized form. This could be troublesome if sanitizing produces non-unique field names of siblings. This also complicates the handling of field tags in the case of unique unsanitized names which sanitize to non-unique names.
   * Lists containing both integers and floating point values are interpretted as a list of the empty interface. This functionality will eventually be implemented so that lists of mixed numbers are stored as floats.
+
+## Feedback
+If you find a case that produces incorrect results or you have a feature suggestion, let me know: submit an issue.
