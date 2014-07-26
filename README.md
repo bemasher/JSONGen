@@ -26,44 +26,44 @@ $ jsongen test.json
 Using [test.json](test.json) as input the example will produce:
 ```go
 type _ struct {
-	Foo          string    `json:"foo"`
-	Intlist      []int     `json:"intlist"`
-	Floatlist    []float64 `json:"floatlist"`
-	Compoundlist []struct {
-		Foo        string   `json:"foo"`
-		Bar        int      `json:"bar"`
+	Bar      int64  `json:"bar"`
+	Baz      bool   `json:"baz"`
+	Boollist []bool `json:"boollist"`
+	Compound struct {
+		Bar        int64    `json:"bar"`
 		Baz        bool     `json:"baz"`
-		Intlist    []int    `json:"intlist"`
-		Stringlist []string `json:"stringlist"`
 		Boollist   []bool   `json:"boollist"`
+		Foo        string   `json:"foo"`
+		Intlist    []int64  `json:"intlist"`
+		Stringlist []string `json:"stringlist"`
+	} `json:"compound"`
+	Compoundlist []struct {
+		Bar        int64    `json:"bar"`
+		Baz        bool     `json:"baz"`
+		Boollist   []bool   `json:"boollist"`
+		Foo        string   `json:"foo"`
+		Intlist    []int64  `json:"intlist"`
+		Stringlist []string `json:"stringlist"`
 	} `json:"compoundlist"`
 	FieldConflict []struct {
-		Foo        interface{} `json:"foo"`
-		Bar        int         `json:"bar"`
+		Bar        int64       `json:"bar"`
 		Baz        bool        `json:"baz"`
-		Intlist    []int       `json:"intlist"`
-		Stringlist []string    `json:"stringlist"`
 		Boollist   []bool      `json:"boollist"`
+		Foo        interface{} `json:"foo"`
+		Intlist    []int64     `json:"intlist"`
+		Stringlist []string    `json:"stringlist"`
 	} `json:"field-conflict"`
-	Stringlist []string    `json:"stringlist"`
-	Sanitary   string      `json:"_Sanitary"`
-	Nil        interface{} `json:"nil"`
-	Bar        int         `json:"bar"`
-	Boollist   []bool      `json:"boollist"`
-	Compound   struct {
-		Foo        string   `json:"foo"`
-		Bar        int      `json:"bar"`
-		Baz        bool     `json:"baz"`
-		Intlist    []int    `json:"intlist"`
-		Stringlist []string `json:"stringlist"`
-		Boollist   []bool   `json:"boollist"`
-	} `json:"compound"`
-	Sanitary0      string
-	Baz            bool `json:"baz"`
-	Sanitary       string
-	Unsanitary     string        `json:"0Unsanitary"`
+	Floatlist      []float64     `json:"floatlist"`
+	Foo            string        `json:"foo"`
+	Intlist        []int64       `json:"intlist"`
+	Nil            interface{}   `json:"nil"`
 	NonHomogeneous []interface{} `json:"non-homogeneous"`
-} 
+	Sanitary       string
+	Sanitary       string `json:"_Sanitary"`
+	Sanitary0      string
+	Stringlist     []string `json:"stringlist"`
+	Unsanitary     string   `json:"0Unsanitary"`
+}
 ```
 
 ## Parsing
@@ -82,9 +82,8 @@ type _ struct {
 
 ### Object
   * Object types are treated as structs.
-  * The top-level object must be either an object or list.
-  * Fields of object structures have no guaranteed order.
-  * If a object structure contains duplicate fields of different types, one of the fields is chosen at random. This is due to golang's unordered iteration over map entries. This should never occur since it is not permitted in the JSON specification, but this is the expected behavior should it happen.
+  * Fields of structures are sorted lexicographically by sanitized field name.
+  * If a structure contains duplicate fields of different types, one of the fields is chosen at random. This is due to golang's unordered iteration over map entries. This should never occur since it is not permitted in the JSON specification, but this is the expected behavior should it happen.
 
 ### Lists
   * A homogeneous list of primitive  values are treated as a list of the primitive type e.g.: `[]float64`
