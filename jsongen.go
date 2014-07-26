@@ -316,6 +316,8 @@ func (t *Tree) normalizeCompoundArray() {
 			}
 		}
 	}
+
+	sort.Sort(t.Children)
 }
 
 func init() {
