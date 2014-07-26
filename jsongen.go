@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"log"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -59,7 +60,7 @@ type Tree struct {
 	Key      Name
 	Kind     Kind
 	Type     Type
-	Children []Tree
+	Children TreeList
 }
 
 // Returns canonical form golang of the type structure.
@@ -106,6 +107,20 @@ func (t Tree) formatHelper(depth int) (r string) {
 	r += fmt.Sprintf("%s %s", t.Type.Repr(), tag)
 
 	return
+}
+
+type TreeList []Tree
+
+func (tl TreeList) Len() int {
+	return len(tl)
+}
+
+func (tl TreeList) Less(i, j int) bool {
+	return tl[i].Key.String() < tl[j].Key.String()
+}
+
+func (tl TreeList) Swap(i, j int) {
+	tl[i], tl[j] = tl[j], tl[i]
 }
 
 // Sanitizes field names.
@@ -203,6 +218,7 @@ func (t *Tree) Populate(data interface{}, key string) {
 			child.Populate(v, k)
 			t.Children = append(t.Children, child)
 		}
+		sort.Sort(t.Children)
 	case []interface{}:
 		t.Kind = Array
 		for _, v := range typ {
@@ -210,6 +226,7 @@ func (t *Tree) Populate(data interface{}, key string) {
 			child.Populate(v, "")
 			t.Children = append(t.Children, child)
 		}
+		sort.Sort(t.Children)
 	case bool:
 		t.Type = Bool
 	case string:
