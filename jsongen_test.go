@@ -277,14 +277,14 @@ func TestCompound(t *testing.T) {
 		}
 
 		expected := Tree{Key: "", Kind: Struct, Children: []Tree{
-			Tree{Key: "Foo", Kind: Primitive, Type: Bool},
-			Tree{Key: "BarI", Kind: Primitive, Type: Int},
 			Tree{Key: "BarF", Kind: Primitive, Type: Float},
-			Tree{Key: "Baz", Kind: Primitive, Type: String},
-			Tree{Key: "FooList", Kind: Array, Type: Bool},
-			Tree{Key: "BarIList", Kind: Array, Type: Int},
 			Tree{Key: "BarFList", Kind: Array, Type: Float},
+			Tree{Key: "BarI", Kind: Primitive, Type: Int},
+			Tree{Key: "BarIList", Kind: Array, Type: Int},
+			Tree{Key: "Baz", Kind: Primitive, Type: String},
 			Tree{Key: "BazList", Kind: Array, Type: String},
+			Tree{Key: "Foo", Kind: Primitive, Type: Bool},
+			Tree{Key: "FooList", Kind: Array, Type: Bool},
 		}}
 
 		if !reflect.DeepEqual(tree, expected) {
@@ -339,14 +339,14 @@ func TestCompoundList(t *testing.T) {
 		}
 
 		expected := Tree{Key: "", Kind: ArrayOfStruct, Children: []Tree{
-			Tree{Key: "Foo", Kind: Primitive, Type: Bool},
-			Tree{Key: "BarI", Kind: Primitive, Type: Int},
 			Tree{Key: "BarF", Kind: Primitive, Type: Float},
-			Tree{Key: "Baz", Kind: Primitive, Type: String},
-			Tree{Key: "FooList", Kind: Array, Type: Bool},
-			Tree{Key: "BarIList", Kind: Array, Type: Int},
 			Tree{Key: "BarFList", Kind: Array, Type: Float},
+			Tree{Key: "BarI", Kind: Primitive, Type: Int},
+			Tree{Key: "BarIList", Kind: Array, Type: Int},
+			Tree{Key: "Baz", Kind: Primitive, Type: String},
 			Tree{Key: "BazList", Kind: Array, Type: String},
+			Tree{Key: "Foo", Kind: Primitive, Type: Bool},
+			Tree{Key: "FooList", Kind: Array, Type: Bool},
 		}}
 
 		if !reflect.DeepEqual(tree, expected) {
@@ -399,9 +399,9 @@ func TestCompoundFieldConflict(t *testing.T) {
 		}
 
 		expected := Tree{Kind: ArrayOfStruct, Children: []Tree{
-			Tree{Key: "Foo", Kind: Primitive, Type: Interface},
 			Tree{Key: "Bar", Kind: Primitive, Type: Interface},
 			Tree{Key: "Baz", Kind: Primitive, Type: Interface},
+			Tree{Key: "Foo", Kind: Primitive, Type: Interface},
 		}}
 
 		if !reflect.DeepEqual(tree, expected) {
