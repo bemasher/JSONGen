@@ -98,5 +98,26 @@ Examples of all of the above can be found in [test.json](test.json).
   * Currently field names within a struct are considered unique based on their unsanitized form. This could be troublesome if sanitizing produces non-unique field names of siblings. This also complicates the handling of field tags in the case of unique unsanitized names which sanitize to non-unique names.
   * Lists containing both integers and floating point values are interpretted as a list of the empty interface. This functionality will eventually be implemented so that lists of mixed numbers are stored as floats.
 
+### License
+The source of this project is licensed under Affero GPL. According to [http://choosealicense.com/licenses/agpl/](http://choosealicense.com/licenses/agpl/) you may:
+
+#### Required:
+
+  * Source code must be made available when distributing the software. In the case of LGPL, the source for the library (and not the entire program) must be made available.
+  * Include a copy of the license and copyright notice with the code.
+  * Indicate significant changes made to the code.
+
+#### Permitted:
+
+  * This software and derivatives may be used for commercial purposes.
+  * You may distribute this software.
+  * This software may be modified.
+  * You may use and modify the software without distributing it.
+
+#### Forbidden:
+
+  * Software is provided without warranty and the software author/license owner cannot be held liable for damages.
+  * You may not grant a sublicense to modify and distribute this software to third parties not included in the license.
+
 ## Feedback
 If you find a case that produces incorrect results or you have a feature suggestion, let me know: submit an issue.
