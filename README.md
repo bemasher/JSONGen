@@ -81,7 +81,7 @@ type _ struct {
   * If sanitizing produces an empty string the identifier is changed to `_`, this will need to be set by hand in order to properly decode the type.
   * If sanitizing produces a field name different from the original value a JSON tag is added to the field.
   * Spaces and `-` are converted to `_`.
-  * Field names are converted to title case treating '_' and '-' as word boundaries along with spaces. This can be disabled using `-title=false`.
+  * Field names are converted to title case treating `_` and `-` as word boundaries along with spaces. This can be disabled using `-title=false`.
 
 ## Types
 ### Primitive
