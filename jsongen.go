@@ -25,10 +25,7 @@ import (
 	"os"
 	"sort"
 	"strings"
-)
-
-const (
-	PrettyPrint = true
+	"unicode"
 )
 
 var config Config
@@ -72,268 +69,301 @@ func (c Config) Close() {
 	c.inputFile.Close()
 }
 
-type Tree struct {
-	Key      Name
-	Kind     Kind
-	Type     Type
-	Children TreeList
-}
+// Field name sanitizer.
+type Ident string
 
-// Returns canonical form golang of the type structure.
-func (t Tree) Format() string {
-	str := "type " + t.formatHelper(0)
+// Golang identifiers must begin with a letter and may contain letters, digits
+// and _'s. If config.titleCase is true, -, _ and spaces are treated as word
+// boundaries, otherwise only spaces are treated as word boundaries.
+func (id Ident) String() (s string) {
+	s = strings.TrimLeftFunc(string(id), func(r rune) bool {
+		return !unicode.IsLetter(r)
+	})
 
-	formatted, err := format.Source([]byte(str))
-	if err != nil {
-		fmt.Println(str)
-		log.Fatal("Error formatting type:", err)
-	}
-
-	return string(formatted)
-}
-
-func (t Tree) formatHelper(depth int) (r string) {
-	var tag string
-
-	if depth != 0 && t.Key.String() != string(t.Key) {
-		tag = fmt.Sprintf("`json:\"%s\"`", string(t.Key))
-	}
-
-	indent := strings.Repeat("\t", depth)
-	r += indent
-
-	r += t.Key.String() + " "
-
-	if t.Kind == Array || t.Kind == ArrayOfStruct {
-		r += fmt.Sprintf("[]")
-	}
-
-	if t.Kind == Struct || t.Kind == ArrayOfStruct {
-		r += "struct {\n"
-		defer func() {
-			r += indent + "} " + tag
-		}()
-
-		for _, f := range t.Children {
-			r += f.formatHelper(depth+1) + "\n"
+	s = strings.Map(func(r rune) rune {
+		if r == ' ' {
+			return ' '
 		}
-		return
-	}
 
-	r += fmt.Sprintf("%s %s", t.Type.Repr(), tag)
-
-	return
-}
-
-type TreeList []Tree
-
-func (tl TreeList) Len() int {
-	return len(tl)
-}
-
-func (tl TreeList) Less(i, j int) bool {
-	return tl[i].Key.String() < tl[j].Key.String()
-}
-
-func (tl TreeList) Swap(i, j int) {
-	tl[i], tl[j] = tl[j], tl[i]
-}
-
-// Sanitizes field names.
-type Name string
-
-func (n Name) String() (s string) {
-	s = strings.TrimLeft(string(n), "0123456789")
-
-	valid := func(r rune) rune {
-		if r >= '0' && r <= '9' {
-			return r
-		}
-		if r >= 'a' && r <= 'z' {
-			return r
-		}
-		if r >= 'A' && r <= 'Z' {
-			return r
-		}
-		if r == '_' || r == '-' {
+		if r == '-' || r == '_' {
 			if config.titleCase {
 				return ' '
-			} else {
-				return '_'
 			}
+			return '_'
 		}
+
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			return r
+		}
+
 		return -1
-	}
-	s = strings.Map(valid, s)
+	}, s)
 
 	s = strings.Title(s)
-	s = strings.Replace(s, " ", "", -1)
+	s = strings.Map(func(r rune) rune {
+		if r == ' ' {
+			return -1
+		}
+		return r
+	}, s)
 
 	if len(s) == 0 {
-		return "_" + strings.Map(valid, string(n))
+		s = "_"
 	}
-	return strings.Title(s)
-}
 
-// Type kinds of nodes.
-type Kind byte
-
-const (
-	Primitive Kind = iota
-	Struct
-	Array
-	ArrayOfStruct
-)
-
-func (k Kind) String() string {
-	return []string{"Primitive", "Struct", "Array", "ArrayOfStruct"}[k]
-}
-
-func (k Kind) MarshalText() (text []byte, err error) {
-	text = []byte(k.String())
 	return
 }
 
-// Types of nodes.
-type Type byte
+// Returns a field tag for the original field name.
+func (id Ident) Tag() string {
+	return "`json:\"" + string(id) + "\"`"
+}
+
+// JSON values are translated to go types as follows:
+// null   -> interface{}
+// bool   -> bool
+// int    -> int64
+// float  -> float64
+// string -> string
+// object -> struct
+type Type int
 
 const (
-	Nil Type = iota
+	Interface Type = iota + 1
 	Bool
 	Int
 	Float
 	String
-	Interface
+	Struct
 )
 
 func (t Type) String() string {
-	return []string{"Null", "Bool", "Int", "Float", "String", "Unknown"}[t]
-}
-
-func (t Type) Repr() string {
-	return []string{"interface{}", "bool", "int64", "float64", "string", "interface{}"}[t]
+	switch t {
+	case Bool:
+		return "bool"
+	case Int:
+		return "int64"
+	case Float:
+		return "float64"
+	case String:
+		return "string"
+	case Struct:
+		return "struct"
+	case Interface:
+		return "interface{}"
+	}
+	return "unset"
 }
 
 func (t Type) MarshalText() (text []byte, err error) {
-	text = []byte(t.String())
+	return []byte(t.String()), nil
+}
+
+type Tree struct {
+	Name     Ident `json:",omitempty"`
+	List     bool  `json:",omitempty"`
+	Type     Type
+	Children []*Tree `json:",omitempty"`
+}
+
+// A tree implements the sort interface on it's children's sanitized names.
+func (t Tree) Len() int {
+	return len(t.Children)
+}
+
+func (t Tree) Less(i, j int) bool {
+	return t.Children[i].Name.String() < t.Children[j].Name.String()
+}
+
+func (t Tree) Swap(i, j int) {
+	t.Children[i], t.Children[j] = t.Children[j], t.Children[i]
+}
+
+// Returns canonical golang of the type structure.
+func (t *Tree) Format() (formatted []byte, err error) {
+	unformatted := []byte("type " + t.formatHelper(0))
+	formatted, err = format.Source(unformatted)
+
+	if err != nil {
+		formatted = unformatted
+	}
 	return
 }
 
-// Given an empty interface which json has been parsed into, populates the tree.
-func (t *Tree) Populate(data interface{}, key string) {
-	t.Key = Name(key)
+func (t *Tree) formatHelper(depth int) (r string) {
+	indent := strings.Repeat("\t", depth)
 
-	// Assume primitive, will be changed if not
-	t.Kind = Primitive
+	r += indent + t.Name.String() + " "
 
-	switch typ := data.(type) {
-	case map[string]interface{}:
-		t.Kind = Struct
-		for k, v := range typ {
-			var child Tree
-			child.Populate(v, k)
-			t.Children = append(t.Children, child)
+	defer func() {
+		if depth != 0 && string(t.Name) != t.Name.String() {
+			r += " " + t.Name.Tag()
 		}
-		sort.Sort(t.Children)
-	case []interface{}:
-		t.Kind = Array
-		for _, v := range typ {
-			var child Tree
-			child.Populate(v, "")
-			t.Children = append(t.Children, child)
+		r += "\n"
+	}()
+
+	if t.List {
+		r += "[]"
+	}
+
+	if t.Type == Struct {
+		r += "struct {\n"
+		defer func() {
+			r += indent + "}"
+		}()
+
+		for _, child := range t.Children {
+			r += child.formatHelper(depth + 1)
 		}
-		sort.Sort(t.Children)
+	} else {
+		r += t.Type.String()
+	}
+
+	return
+}
+
+// Given a value which JSON has been parsed into, populates the tree.
+func (t *Tree) Populate(v interface{}) {
+	if v == nil {
+		t.Type = Interface
+	}
+
+	switch i := v.(type) {
 	case bool:
 		t.Type = Bool
 	case string:
 		t.Type = String
 	case json.Number:
-		_, err := data.(json.Number).Int64()
-		if err != nil {
-			t.Type = Float
-		} else {
+		if _, err := i.Int64(); err == nil {
 			t.Type = Int
+		} else {
+			if _, err := i.Float64(); err == nil {
+				t.Type = Float
+			}
 		}
-	default:
-		t.Type = Nil
+	case []interface{}:
+		t.List = true
+		t.Type = Interface
+		for _, v := range i {
+			child := &Tree{}
+			child.Populate(v)
+			t.Children = append(t.Children, child)
+		}
+	case map[string]interface{}:
+		t.Type = Struct
+		for k, v := range i {
+			child := &Tree{Name: Ident(k)}
+			child.Populate(v)
+			t.Children = append(t.Children, child)
+		}
+		sort.Sort(t)
 	}
 }
 
-// Flattens arrays of both primitive and compound types.
+type ElementType struct {
+	List bool
+	Type Type
+}
+
+// Flattens homogeneous lists of primitive types and squashes lists of struct
+// into one struct. If fields have conflicting types while squashing a
+// list of struct, the offending field is converted to the empty interface.
 func (t *Tree) Normalize() {
-	t.normalizePrimitiveArray()
-	t.normalizeCompoundArray()
-}
-
-func (t *Tree) normalizePrimitiveArray() {
-	// Traverse in depth-first order.
 	for idx := range t.Children {
-		t.Children[idx].normalizePrimitiveArray()
+		t.Children[idx].Normalize()
 	}
 
-	if t.Kind == Array {
-		var typ Type
-		isPrimitive := true
-		isHomogeneous := true
-		for _, c := range t.Children {
-			if c.Kind != Primitive {
-				isPrimitive = false
-				isHomogeneous = false
-				break
-			}
-			if typ == Nil {
-				typ = c.Type
-			}
-			if typ != c.Type {
-				isHomogeneous = false
-				break
-			}
+	if !t.List || len(t.Children) == 0 {
+		return
+	}
+
+	types := make(map[Type]bool)
+	for _, child := range t.Children {
+		types[child.Type] = true
+	}
+	switch len(types) {
+	case 1:
+		// Get first key out of 1-element map.
+		for typ := range types {
+			t.Type = typ
 		}
 
-		if isPrimitive {
-			if isHomogeneous {
-				t.Type = typ
-			}
-			if !isHomogeneous || len(t.Children) == 0 {
-				t.Type = Interface
-			}
-			t.Children = nil
-		}
-	}
-}
+		if t.List && t.Type == Struct {
+			fields := make(map[Ident]*Tree)
 
-func (t *Tree) normalizeCompoundArray() {
-	// Traverse in depth-first order.
-	for idx := range t.Children {
-		t.Children[idx].normalizeCompoundArray()
-	}
-
-	if t.Kind == Array {
-		fields := make(map[Name]Tree)
-		for _, listChild := range t.Children {
-			for _, structChild := range listChild.Children {
-				if _, exists := fields[structChild.Key]; exists {
-					if fields[structChild.Key].Type != structChild.Type {
-						field := fields[structChild.Key]
-						field.Type = Interface
-						fields[structChild.Key] = field
+			for _, element := range t.Children {
+				for _, child := range element.Children {
+					if _, exists := fields[child.Name]; !exists {
+						fields[child.Name] = child
+					} else {
+						if !Compare(fields[child.Name], child) {
+							fields[child.Name].Type = Interface
+							fields[child.Name].Children = nil
+						}
 					}
-				} else {
-					fields[structChild.Key] = structChild
 				}
 			}
-		}
 
-		if len(fields) > 0 && t.Type == Nil {
-			t.Kind = ArrayOfStruct
 			t.Children = nil
-			for _, val := range fields {
-				t.Children = append(t.Children, val)
+			for _, child := range fields {
+				t.Children = append(t.Children, child)
 			}
+			sort.Sort(t)
+		} else {
+			t.Children = nil
+		}
+	case 2:
+		if types[Int] && types[Float] {
+			t.Type = Float
+			t.Children = nil
+		}
+	default:
+		t.Type = Interface
+		t.Children = nil
+	}
+}
+
+// Used for comparing fields between structs while squashing a list of struct.
+type FieldType struct {
+	Name Ident
+	List bool
+	Type Type
+}
+
+// Recursively compares field names and types of two structs.
+func Compare(t1, t2 *Tree) bool {
+	c1, c2 := Walker(t1), Walker(t2)
+	for {
+		v1, ok1 := <-c1
+		v2, ok2 := <-c2
+		if !ok1 || !ok2 {
+			return ok1 == ok2
+		}
+		if v1 != v2 {
+			break
 		}
 	}
+	return false
+}
 
-	sort.Sort(t.Children)
+func Walker(t *Tree) <-chan FieldType {
+	ch := make(chan FieldType)
+	go func() {
+		Walk(t, ch)
+		close(ch)
+	}()
+	return ch
+}
+
+func Walk(t *Tree, ch chan FieldType) {
+	if t == nil {
+		return
+	}
+
+	ch <- FieldType{t.Name, t.List, t.Type}
+	for _, child := range t.Children {
+		Walk(child, ch)
+	}
 }
 
 func init() {
@@ -356,7 +386,7 @@ func main() {
 	}
 
 	var tree Tree
-	tree.Populate(data, "")
+	tree.Populate(data)
 	if config.normalize {
 		tree.Normalize()
 	}
@@ -371,5 +401,9 @@ func main() {
 		log.Fatal("Error dumping tree:", err)
 	}
 
-	fmt.Println(tree.Format())
+	source, err := tree.Format()
+	fmt.Println(string(source))
+	if err != nil {
+		log.Fatal("Error formatting source:", err)
+	}
 }

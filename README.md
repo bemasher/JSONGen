@@ -26,53 +26,62 @@ $ jsongen test.json
 Using [test.json](test.json) as input the example will produce:
 ```go
 type _ struct {
-	Bar      int64  `json:"bar"`
-	Baz      bool   `json:"baz"`
-	Boollist []bool `json:"boollist"`
-	Compound struct {
-		Bar        int64    `json:"bar"`
-		Baz        bool     `json:"baz"`
-		Boollist   []bool   `json:"boollist"`
-		Foo        string   `json:"foo"`
-		Intlist    []int64  `json:"intlist"`
-		Stringlist []string `json:"stringlist"`
-	} `json:"compound"`
-	Compoundlist []struct {
-		Bar        int64    `json:"bar"`
-		Baz        bool     `json:"baz"`
-		Boollist   []bool   `json:"boollist"`
-		Foo        string   `json:"foo"`
-		Intlist    []int64  `json:"intlist"`
-		Stringlist []string `json:"stringlist"`
-	} `json:"compoundlist"`
-	FieldConflict []struct {
-		Bar        int64       `json:"bar"`
-		Baz        bool        `json:"baz"`
-		Boollist   []bool      `json:"boollist"`
-		Foo        interface{} `json:"foo"`
-		Intlist    []int64     `json:"intlist"`
-		Stringlist []string    `json:"stringlist"`
-	} `json:"field-conflict"`
-	Floatlist      []float64     `json:"floatlist"`
-	Foo            string        `json:"foo"`
-	Intlist        []int64       `json:"intlist"`
-	Nil            interface{}   `json:"nil"`
-	NonHomogeneous []interface{} `json:"non-homogeneous"`
-	Sanitary       string
-	Sanitary       string `json:"_Sanitary"`
-	Sanitary0      string
-	Stringlist     []string `json:"stringlist"`
-	Unsanitary     string   `json:"0Unsanitary"`
+	Bool              bool          `json:"bool"`
+	Boollist          []bool        `json:"boollist"`
+	Float             float64       `json:"float"`
+	Floatlist         []float64     `json:"floatlist"`
+	Heterogeneouslist []interface{} `json:"heterogeneouslist"`
+	Int               int64         `json:"int"`
+	Intlist           []int64       `json:"intlist"`
+	Nil               interface{}   `json:"nil"`
+	Nillist           []interface{} `json:"nillist"`
+	Sanitary          string        `json:"_Sanitary"`
+	Sanitary          string
+	Sanitary0         string
+	String            string   `json:"string"`
+	Stringlist        []string `json:"stringlist"`
+	Struct            struct {
+		Bool   bool        `json:"bool"`
+		Float  float64     `json:"float"`
+		Int    int64       `json:"int"`
+		Nil    interface{} `json:"nil"`
+		String string      `json:"string"`
+	} `json:"struct"`
+	Structlist []struct {
+		Bool   bool    `json:"bool"`
+		Float  float64 `json:"float"`
+		Int    int64   `json:"int"`
+		String string  `json:"string"`
+	} `json:"structlist"`
+	Structlistsquash []struct {
+		Bool   bool    `json:"bool"`
+		Float  float64 `json:"float"`
+		Int    int64   `json:"int"`
+		String string  `json:"string"`
+	} `json:"structlistsquash"`
+	Structlistsquashconflict []struct {
+		Bool     bool        `json:"bool"`
+		Conflict interface{} `json:"conflict"`
+		Float    float64     `json:"float"`
+		Int      int64       `json:"int"`
+		String   string      `json:"string"`
+	} `json:"structlistsquashconflict"`
+	TitleCase  string `json:"title_case"`
+	TitleCase  string `json:"title case"`
+	TitleCase  string `json:"title-case"`
+	Titlecase  string `json:"titlecase"`
+	Unsanitary string `json:"0Unsanitary"`
+	_          string
 }
 ```
 
 ## Parsing
 ### Field Names
   * Field names are sanitized and written as exported fields of the generated type.
-  * If sanitizing produces an empty string the original field name is prefixed with an underscore and only invalid identifier characters are removed.
-    * The initial sanitizing method trims digits from the left of the identifier. This step performed on a field name of "12345" would produce an empty string. At this point the field name is instead stripped of only invalid characters like punctuation and prefixed with an underscore.
-  * If sanitizing produces a field name different from the original value a JSON tag is added to the field allowing parsing after the field name has been modified.
-  * Field names are converted to title case treating '_' and '-' as word boundaries along with spaces.
+  * If sanitizing produces an empty string the identifier is changed to `_`, this will need to be set by hand in order to properly decode the type.
+  * If sanitizing produces a field name different from the original value a JSON tag is added to the field.
+  * Spaces and `-` are converted to `_`.
+  * Field names are converted to title case treating '_' and '-' as word boundaries along with spaces. This can be disabled using `-title=false`.
 
 ## Types
 ### Primitive
@@ -83,20 +92,20 @@ type _ struct {
 ### Object
   * Object types are treated as structs.
   * Fields of structures are sorted lexicographically by sanitized field name.
-  * If a structure contains duplicate fields of different types, one of the fields is chosen at random. This is due to golang's unordered iteration over map entries. This should never occur since it is not permitted in the JSON specification, but this is the expected behavior should it happen.
+  * If a structure contains duplicate fields of different types, the type will be chosen at random since Golang's map iteration order is undefined. This shouldn't be a problem since this is not permitted in JSON specification, but this is the expected behavior should it happen.
 
 ### Lists
-  * A homogeneous list of primitive  values are treated as a list of the primitive type e.g.: `[]float64`
+  * A homogeneous list of primitive values are treated as a list of the primitive type e.g.: `[]float64`
   * Lists of heterogeneous types are treated as a list of the empty interface: `[]interface{}`
-  * Lists with object elements are treated as an array of structs.
-    * Fields of each element are "squashed" into a single struct. The result is an array of a struct containing all encountered fields.
+  * Lists with object elements are treated as a list of structs.
+    * Fields of each element are "squashed" into a single struct. The result is an array of a struct containing all encountered fields.   
     * If a field in one element has a different type in another of the same list, the offending field is treated as an empty interface.
 
 Examples of all of the above can be found in [test.json](test.json).
 
 ## Caveats
   * Currently field names within a struct are considered unique based on their unsanitized form. This could be troublesome if sanitizing produces non-unique field names of siblings. This also complicates the handling of field tags in the case of unique unsanitized names which sanitize to non-unique names.
-  * Lists containing both integers and floating point values are interpretted as a list of the empty interface. This functionality will eventually be implemented so that lists of mixed numbers are stored as floats.
+  * Lists containing both integers and floating point values are interpreted as a list of float64.
 
 ### License
 The source of this project is licensed under Affero GPL. According to [http://choosealicense.com/licenses/agpl/](http://choosealicense.com/licenses/agpl/) you may:
