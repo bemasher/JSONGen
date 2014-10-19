@@ -357,13 +357,16 @@ func TestSanitizier(t *testing.T) {
 		{"title case", "TitleCase", false},
 
 		{"123", "_", true},
+		{"123.foo", "Foo", true},
+		{".foo123", "Foo123", true},
+		{".foo.123", "Foo123", true},
 	}
 
 	for _, testCase := range testCases {
 		sanitized := Ident(testCase.Source)
 		config.titleCase = testCase.TitleCase
 		if testCase.Sanitized != sanitized.String() {
-			t.Fatalf("Expected: %q Got: %q\n", testCase.Sanitized, sanitized.String())
+			t.Fatalf("Source: %q Expected: %q Got: %q\n", testCase.Source, testCase.Sanitized, sanitized.String())
 		}
 	}
 }

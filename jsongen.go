@@ -76,15 +76,18 @@ type Ident string
 // and _'s. If config.titleCase is true, -, _ and spaces are treated as word
 // boundaries, otherwise only spaces are treated as word boundaries.
 func (id Ident) String() (s string) {
+	// Trim non-letter characters from the left of the identifier.
 	s = strings.TrimLeftFunc(string(id), func(r rune) bool {
 		return !unicode.IsLetter(r)
 	})
 
+	// Remove any invalid characters in the identifier.
 	s = strings.Map(func(r rune) rune {
 		if r == ' ' {
 			return ' '
 		}
 
+		// Convert -'s to _'s or spaces depending on configuration.
 		if r == '-' || r == '_' {
 			if config.titleCase {
 				return ' '
@@ -99,7 +102,9 @@ func (id Ident) String() (s string) {
 		return -1
 	}, s)
 
+	// Perform title casing.
 	s = strings.Title(s)
+	// Remove spaces from the identifier.
 	s = strings.Map(func(r rune) rune {
 		if r == ' ' {
 			return -1
@@ -107,6 +112,7 @@ func (id Ident) String() (s string) {
 		return r
 	}, s)
 
+	// If the identifier is empty, output an _.
 	if len(s) == 0 {
 		s = "_"
 	}
@@ -139,6 +145,8 @@ const (
 
 func (t Type) String() string {
 	switch t {
+	case Interface:
+		return "interface{}"
 	case Bool:
 		return "bool"
 	case Int:
@@ -149,16 +157,17 @@ func (t Type) String() string {
 		return "string"
 	case Struct:
 		return "struct"
-	case Interface:
-		return "interface{}"
 	}
 	return "unset"
 }
 
+// Necessary for dumping the tree for debugging.
 func (t Type) MarshalText() (text []byte, err error) {
 	return []byte(t.String()), nil
 }
 
+// A type tree describes parsed JSON input. Elements have a name, type and
+// children, list specifies if the type is a list.
 type Tree struct {
 	Name     Ident `json:",omitempty"`
 	List     bool  `json:",omitempty"`
@@ -181,9 +190,13 @@ func (t Tree) Swap(i, j int) {
 
 // Returns canonical golang of the type structure.
 func (t *Tree) Format() (formatted []byte, err error) {
+	// Store the raw source for debugging.
 	unformatted := []byte("type " + t.formatHelper(0))
+
+	// Attempt to format the source.
 	formatted, err = format.Source(unformatted)
 
+	// If formatting failed, return the unformatted source and the error.
 	if err != nil {
 		formatted = unformatted
 	}
@@ -193,8 +206,10 @@ func (t *Tree) Format() (formatted []byte, err error) {
 func (t *Tree) formatHelper(depth int) (r string) {
 	indent := strings.Repeat("\t", depth)
 
+	// Print the name of the current element.
 	r += indent + t.Name.String() + " "
 
+	// On return append a tag if the field name differs from the parsed name.
 	defer func() {
 		if depth != 0 && string(t.Name) != t.Name.String() {
 			r += " " + t.Name.Tag()
@@ -202,21 +217,26 @@ func (t *Tree) formatHelper(depth int) (r string) {
 		r += "\n"
 	}()
 
+	// Prefix the type with [] if list is true.
 	if t.List {
 		r += "[]"
 	}
 
+	// Print type
+	r += t.Type.String()
+
+	// If the type is a struct, print struct and enclosing curly braces.
 	if t.Type == Struct {
-		r += "struct {\n"
+		r += " {\n"
 		defer func() {
 			r += indent + "}"
 		}()
 
+		// Recurse for each child of the struct.
 		for _, child := range t.Children {
 			r += child.formatHelper(depth + 1)
 		}
 	} else {
-		r += t.Type.String()
 	}
 
 	return
@@ -224,24 +244,31 @@ func (t *Tree) formatHelper(depth int) (r string) {
 
 // Given a value which JSON has been parsed into, populates the tree.
 func (t *Tree) Populate(v interface{}) {
+	// Handles null value in JSON.
 	if v == nil {
 		t.Type = Interface
 	}
 
+	// Type switch on the current element, store type and recurse if necessary.
 	switch i := v.(type) {
 	case bool:
 		t.Type = Bool
 	case string:
 		t.Type = String
 	case json.Number:
+		// If number parses successfully as an int, store as int.
 		if _, err := i.Int64(); err == nil {
 			t.Type = Int
 		} else {
+			// Float should always succeed in parsing so only store as float
+			// if parsing as int failed.
 			if _, err := i.Float64(); err == nil {
 				t.Type = Float
 			}
 		}
 	case []interface{}:
+		// Set list to true and type to interface, type will be determined
+		// later if normalization is used. Recurse for each child.
 		t.List = true
 		t.Type = Interface
 		for _, v := range i {
@@ -250,52 +277,62 @@ func (t *Tree) Populate(v interface{}) {
 			t.Children = append(t.Children, child)
 		}
 	case map[string]interface{}:
+		// Set type to struct and recurse for each child. Store key as child name.
 		t.Type = Struct
 		for k, v := range i {
 			child := &Tree{Name: Ident(k)}
 			child.Populate(v)
 			t.Children = append(t.Children, child)
 		}
+		// Sort children for consistent output.
 		sort.Sort(t)
 	}
-}
-
-type ElementType struct {
-	List bool
-	Type Type
 }
 
 // Flattens homogeneous lists of primitive types and squashes lists of struct
 // into one struct. If fields have conflicting types while squashing a
 // list of struct, the offending field is converted to the empty interface.
 func (t *Tree) Normalize() {
+	// Normalize from the bottom up so use depth first iteration.
 	for idx := range t.Children {
 		t.Children[idx].Normalize()
 	}
 
-	if !t.List || len(t.Children) == 0 {
+	// If this isn't a list or it's a struct, exit.
+	if !t.List || t.Type == Struct {
 		return
 	}
 
+	// Make a map of children types.
 	types := make(map[Type]bool)
 	for _, child := range t.Children {
 		types[child.Type] = true
 	}
+
 	switch len(types) {
+	// Children are all of the same type.
 	case 1:
 		// Get first key out of 1-element map.
 		for typ := range types {
 			t.Type = typ
 		}
 
+		// If this is a list of structs, squash grand-children into single struct.
 		if t.List && t.Type == Struct {
+			// Make a map of grand-children
 			fields := make(map[Ident]*Tree)
 
+			// For each child struct.
 			for _, element := range t.Children {
+				// For each grand-child.
 				for _, child := range element.Children {
+					// Store grand-child in fields map if it doesn't already exist.
 					if _, exists := fields[child.Name]; !exists {
 						fields[child.Name] = child
 					} else {
+						// Recursively compare the grand-child type with the
+						// one already stored in fields. If the comparison
+						// fails, store as empty interface.
 						if !Compare(fields[child.Name], child) {
 							fields[child.Name].Type = Interface
 							fields[child.Name].Children = nil
@@ -304,20 +341,28 @@ func (t *Tree) Normalize() {
 				}
 			}
 
+			// Remove all of the children.
 			t.Children = nil
+
+			// Store squashed list of children.
 			for _, child := range fields {
 				t.Children = append(t.Children, child)
 			}
+
+			// Sort new list of children.
 			sort.Sort(t)
 		} else {
+			// Not a list of struct so just remove all children.
 			t.Children = nil
 		}
 	case 2:
+		// Two types found, store as float if both types are int and float.
 		if types[Int] && types[Float] {
 			t.Type = Float
 			t.Children = nil
 		}
 	default:
+		// Heterogeneous list types, store as empty interface.
 		t.Type = Interface
 		t.Children = nil
 	}
@@ -332,13 +377,18 @@ type FieldType struct {
 
 // Recursively compares field names and types of two structs.
 func Compare(t1, t2 *Tree) bool {
+	// Spawn two walkers for each tree.
 	c1, c2 := Walker(t1), Walker(t2)
 	for {
+		// Get values from walkers.
 		v1, ok1 := <-c1
 		v2, ok2 := <-c2
+		// If either of the walkers closed their channel.
 		if !ok1 || !ok2 {
+			// Check to see if both closed at the same time.
 			return ok1 == ok2
 		}
+		// If the received values don't match, comparison fails.
 		if v1 != v2 {
 			break
 		}
@@ -346,6 +396,7 @@ func Compare(t1, t2 *Tree) bool {
 	return false
 }
 
+// Recursively walks a tree, returns a channel of values.
 func Walker(t *Tree) <-chan FieldType {
 	ch := make(chan FieldType)
 	go func() {
@@ -355,6 +406,7 @@ func Walker(t *Tree) <-chan FieldType {
 	return ch
 }
 
+// Recursively walks a tree, sending values on given channel.
 func Walk(t *Tree, ch chan FieldType) {
 	if t == nil {
 		return
