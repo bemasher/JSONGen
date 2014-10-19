@@ -66,12 +66,12 @@ type _ struct {
 		Int      int64       `json:"int"`
 		String   string      `json:"string"`
 	} `json:"structlistsquashconflict"`
-	TitleCase  string `json:"title_case"`
 	TitleCase  string `json:"title case"`
+	TitleCase  string `json:"title_case"`
 	TitleCase  string `json:"title-case"`
 	Titlecase  string `json:"titlecase"`
 	Unsanitary string `json:"0Unsanitary"`
-	_          string
+	_          string `json:"123"`
 }
 ```
 
