@@ -97,6 +97,7 @@ type _ struct {
 ### Lists
   * A homogeneous list of primitive values are treated as a list of the primitive type e.g.: `[]float64`
   * Lists of heterogeneous types are treated as a list of the empty interface: `[]interface{}`
+  * Lists containing both integers and floating point values are interpreted as `[]float64`.
   * Lists with object elements are treated as a list of structs.
     * Fields of each element are "squashed" into a single struct. The result is an array of a struct containing all encountered fields.   
     * If a field in one element has a different type in another of the same list, the offending field is treated as an empty interface.
@@ -105,7 +106,6 @@ Examples of all of the above can be found in [test.json](test.json).
 
 ## Caveats
   * Currently sibling field names are not guaranteed to be unique.
-  * Lists containing both integers and floating point values are interpreted as a list of float64.
 
 ### License
 The source of this project is licensed under Affero GPL. According to [http://choosealicense.com/licenses/agpl/](http://choosealicense.com/licenses/agpl/) you may:
