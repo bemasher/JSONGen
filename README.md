@@ -104,7 +104,7 @@ type _ struct {
 Examples of all of the above can be found in [test.json](test.json).
 
 ## Caveats
-  * Currently field names within a struct are considered unique based on their unsanitized form. This could be troublesome if sanitizing produces non-unique field names of siblings. This also complicates the handling of field tags in the case of unique unsanitized names which sanitize to non-unique names.
+  * Currently sibling field names are not guaranteed to be unique.
   * Lists containing both integers and floating point values are interpreted as a list of float64.
 
 ### License
