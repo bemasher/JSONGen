@@ -298,8 +298,8 @@ func (t *Tree) Normalize() {
 		t.Children[idx].Normalize()
 	}
 
-	// If this isn't a list or it's a struct, exit.
-	if !t.List || t.Type == Struct {
+	// Normalization only applies to lists.
+	if !t.List {
 		return
 	}
 
