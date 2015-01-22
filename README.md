@@ -108,7 +108,7 @@ Examples of all of the above can be found in [test.json](test.json).
 ## Caveats
   * Currently sibling field names are not guaranteed to be unique.
 
-### License
+## License
 The source of this project is licensed under GNU GPL v3.0, according to [http://choosealicense.com/licenses/gpl-3.0/](http://choosealicense.com/licenses/gpl-3.0/):
 
 #### Required:
