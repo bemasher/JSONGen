@@ -113,22 +113,22 @@ The source of this project is licensed under GNU GPL v3.0, according to [http://
 
 #### Required:
 
- * Disclose Source: Source code must be made available when distributing the software. In the case of LGPL, the source for the library (and not the entire program) must be made available.
- * License and copyright notice: Include a copy of the license and copyright notice with the code.
- * State Changes: Indicate significant changes made to the code.
+ * **Disclose Source**: Source code must be made available when distributing the software. In the case of LGPL, the source for the library (and not the entire program) must be made available.
+ * **License and copyright notice**: Include a copy of the license and copyright notice with the code.
+ * **State Changes**: Indicate significant changes made to the code.
 
 #### Permitted:
 
- * Commercial Use: This software and derivatives may be used for commercial purposes.
- * Distribution: You may distribute this software.
- * Modification: This software may be modified.
- * Patent Grant: This license provides an express grant of patent rights from the contributor to the recipient.
- * Private Use: You may use and modify the software without distributing it.
+ * **Commercial Use**: This software and derivatives may be used for commercial purposes.
+ * **Distribution**: You may distribute this software.
+ * **Modification**: This software may be modified.
+ * **Patent Grant**: This license provides an express grant of patent rights from the contributor to the recipient.
+ * **Private Use**: You may use and modify the software without distributing it.
 
 #### Forbidden:
 
- * Hold Liable: Software is provided without warranty and the software author/license owner cannot be held liable for damages.
- * Sublicensing: You may not grant a sublicense to modify and distribute this software to third parties not included in the license.
+ * **Hold Liable**: Software is provided without warranty and the software author/license owner cannot be held liable for damages.
+ * **Sublicensing**: You may not grant a sublicense to modify and distribute this software to third parties not included in the license.
 
 ## Feedback
 If you find a case that produces incorrect results or you have a feature suggestion, let me know: submit an issue.
